@@ -36,6 +36,10 @@
   `Gtk.ColorDialog` only selected it in the palette grid (leaving the editor on
   its default red), so switched to `Gtk.ColorChooserDialog` with
   `show_editor=True` + `set_rgba()`, seeded from the live entry value.
+- Picker now shows a "Recent" strip of up to 10 previously-built colours (click a
+  swatch to restore it). Persisted newest-first in
+  `$XDG_CONFIG_HOME/celestial-theme-forge/recent-colors`; recorded on Create,
+  deduped and capped at 10. Row hides when empty.
 
 ### Technical Details (picker)
 

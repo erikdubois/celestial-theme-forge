@@ -27,6 +27,11 @@ HEX_RE = re.compile(r"^#?[0-9a-fA-F]{6}$")
 USER_AGENT = "celestial-theme-forge/1.0"  # api.color.pizza 403s the default urllib UA
 # color-names lists to sample for varied suggestions (api.color.pizza).
 NAME_LISTS = ["", "bestOf", "wikipedia", "x11", "ntc"]
+# Recently-built colours, newest first — pure user state, always in XDG config.
+RECENT_FILE = os.path.join(
+    os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+    "celestial-theme-forge", "recent-colors")
+RECENT_MAX = 10
 
 
 def resolve_celestial_dir():
@@ -72,6 +77,25 @@ def custom_names():
     return names
 
 
+def load_recent():
+    """Recently-built colours as '#rrggbb' strings, newest first (max RECENT_MAX)."""
+    out = []
+    try:
+        for line in open(RECENT_FILE, encoding="utf-8"):
+            h = line.strip().lower()
+            if HEX_RE.match(h) and h not in out:
+                out.append("#" + h.lstrip("#"))
+    except OSError:
+        pass
+    return out[:RECENT_MAX]
+
+
+def save_recent(colors):
+    os.makedirs(os.path.dirname(RECENT_FILE), exist_ok=True)
+    with open(RECENT_FILE, "w", encoding="utf-8") as f:
+        f.write("\n".join(colors[:RECENT_MAX]) + "\n")
+
+
 def _get_json(url):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=6) as resp:
@@ -115,6 +139,7 @@ class PickerWindow(Gtk.ApplicationWindow):
         self.rgba = Gdk.RGBA()
         self.rgba.parse("#8d2dc9")
         self._busy = False
+        self.recent = load_recent()
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
                       margin_top=14, margin_bottom=14, margin_start=14, margin_end=14)
@@ -135,6 +160,16 @@ class PickerWindow(Gtk.ApplicationWindow):
         for w in (self.hex_entry, self.swatch, choose_btn, pick_btn):
             crow.append(w)
         box.append(crow)
+
+        # ── recent colours ──────────────────────────────────────────────
+        self.recent_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        rlabel = Gtk.Label(label="Recent:", xalign=0)
+        rlabel.add_css_class("dim-label")
+        self.recent_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        self.recent_row.append(rlabel)
+        self.recent_row.append(self.recent_box)
+        box.append(self.recent_row)
+        self._refresh_recent()
 
         # ── name research ───────────────────────────────────────────────
         box.append(self._heading("2. Name it"))
@@ -186,6 +221,35 @@ class PickerWindow(Gtk.ApplicationWindow):
         ctx.set_source_rgb(self.rgba.red, self.rgba.green, self.rgba.blue)
         ctx.rectangle(0, 0, width, height)
         ctx.fill()
+
+    # ── recent colours ──────────────────────────────────────────────────
+    def _refresh_recent(self):
+        child = self.recent_box.get_first_child()
+        while child:
+            nxt = child.get_next_sibling()
+            self.recent_box.remove(child)
+            child = nxt
+        for hexv in self.recent:
+            self.recent_box.append(self._recent_swatch(hexv))
+        self.recent_row.set_visible(bool(self.recent))
+
+    def _recent_swatch(self, hexv):
+        rgba = Gdk.RGBA()
+        rgba.parse(hexv)
+        area = Gtk.DrawingArea(content_width=22, content_height=18)
+        area.set_draw_func(
+            lambda _a, ctx, w, h, c=rgba: (ctx.set_source_rgb(c.red, c.green, c.blue),
+                                           ctx.rectangle(0, 0, w, h), ctx.fill()))
+        btn = Gtk.Button(child=area, tooltip_text=hexv)
+        btn.connect("clicked", lambda _b, h=hexv: self.hex_entry.set_text(h))
+        return btn
+
+    def _remember_color(self, hexv):
+        hexv = ("#" + hexv.lstrip("#")).lower()
+        self.recent = [hexv] + [c for c in self.recent if c != hexv]
+        self.recent = self.recent[:RECENT_MAX]
+        save_recent(self.recent)
+        self._refresh_recent()
 
     def _current_hex(self):
         t = self.hex_entry.get_text().strip()
@@ -309,6 +373,7 @@ class PickerWindow(Gtk.ApplicationWindow):
         name = sanitize_name(self.name_entry.get_text())
         if not (hexv and name) or self._busy:
             return
+        self._remember_color(hexv)
         self._busy = True
         self.create_btn.set_sensitive(False)
         self.create_spinner.start()
