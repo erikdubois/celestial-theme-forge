@@ -32,6 +32,10 @@
 - Added `theme-forge-picker.desktop` (installed to `/usr/share/applications/`) so
   the GUI appears in the application menu under Settings. Uses the stock
   `preferences-desktop-theme` icon.
+- Picker "Choose…" now opens the colour editor pre-set to the current colour.
+  `Gtk.ColorDialog` only selected it in the palette grid (leaving the editor on
+  its default red), so switched to `Gtk.ColorChooserDialog` with
+  `show_editor=True` + `set_rgba()`, seeded from the live entry value.
 
 ### Technical Details (picker)
 

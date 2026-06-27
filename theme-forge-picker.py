@@ -206,14 +206,26 @@ class PickerWindow(Gtk.ApplicationWindow):
         self._refresh_create_sensitivity()
 
     def _on_choose(self, _widget):
-        dialog = Gtk.ColorDialog()
-        dialog.choose_rgba(self, self.rgba, None, self._on_chosen)
+        # Open the chooser pre-seeded with the current colour. Build the RGBA
+        # fresh from the entry so it can't lag behind a just-typed value.
+        initial = Gdk.RGBA()
+        if not initial.parse(self._current_hex() or self.rgba.to_string()):
+            initial = self.rgba
+        # Gtk.ColorChooserDialog (deprecated but reliable) opens its editor
+        # directly on the set colour; Gtk.ColorDialog only selects it in the
+        # palette grid, leaving the editor screen on its default red.
+        dialog = Gtk.ColorChooserDialog(title="Pick a colour", transient_for=self,
+                                        modal=True, show_editor=True)
+        dialog.set_rgba(initial)
+        dialog.connect("response", self._on_chosen)
+        dialog.present()
 
-    def _on_chosen(self, dialog, result):
-        try:
-            rgba = dialog.choose_rgba_finish(result)
-        except GLib.Error:
-            return
+    def _on_chosen(self, dialog, response):
+        if response == Gtk.ResponseType.OK:
+            self._set_hex_from_rgba(dialog.get_rgba())
+        dialog.destroy()
+
+    def _set_hex_from_rgba(self, rgba):
         self.hex_entry.set_text("#%02x%02x%02x" % (
             round(rgba.red * 255), round(rgba.green * 255), round(rgba.blue * 255)))
 
