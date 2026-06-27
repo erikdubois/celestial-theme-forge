@@ -1,0 +1,10 @@
+__pycache__
+.ruff_cache/
+
+# makepkg build artifacts (build.sh builds in /tmp, but guard against
+# stray in-place `makepkg` runs leaving these behind)
+src/
+pkg/
+celestial-theme-forge/
+*.pkg.tar.zst
+*.log

@@ -42,6 +42,23 @@
   when you exit the picker (Choose… or Pick from screen), deduped; the 11th pick
   drops the oldest (leftmost). Persisted in
   `$XDG_CONFIG_HOME/celestial-theme-forge/recent-colors`.
+- Added `build.sh`: one-shot shipper that keeps this folder clean and publishes
+  the package to `nemesis_repo`. Building in place left `src/`, `pkg/`, a nested
+  `celestial-theme-forge/` git clone and `*.pkg.tar.zst` cluttering the repo;
+  these are now wiped up front and gitignored.
+
+### Technical Details (build.sh)
+
+- Pipeline: wipe makepkg leftovers → bump PKGBUILD (CalVer `pkgver`, auto
+  `pkgrel`) → `up.sh` (push source to GitHub) → build in `/tmp` via
+  `makechrootpkg` → copy `.pkg.tar.zst` into `nemesis_repo/x86_64/` →
+  `nemesis_repo/up.sh` (repo-add + push live).
+- Cleanup + `.gitignore` run **before** `up.sh`, since `up.sh` does
+  `git add --all` — otherwise the nested clone and pkg get pushed to GitHub.
+- The source push is required because the PKGBUILD uses `source=git+<github>`:
+  `makepkg` pulls the payload from GitHub, so an un-pushed change ships stale.
+  This is why this self-contained repo's `build.sh` also does the source push,
+  unlike the canonical split `flow-*` pipeline.
 
 ### Technical Details (picker)
 
@@ -67,6 +84,6 @@
 
 - New: `generate-arc-colors.sh`, `arc-colors-recolor.py`, `arc-colors-scss.py`,
   `render-all.sh`, `README.md`, `CLAUDE.md`, `CHANGELOG.md`
-- New: `theme-forge-picker.py`
+- New: `theme-forge-picker.py`, `build.sh`
 - Changed: `generate-arc-colors.sh` (`--add` flag + `custom-colors.def` merge),
-  `README.md` (picker docs + prerequisites)
+  `README.md` (picker docs + prerequisites), `.gitignore` (makepkg artifacts)
