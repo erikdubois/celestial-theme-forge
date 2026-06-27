@@ -15,6 +15,14 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# custom-colors.def lives in-tree for a writable dev checkout, else in a per-user
+# XDG path (matches generate-arc-colors.sh, which actually writes it).
+if os.access(SCRIPT_DIR, os.W_OK):
+    CUSTOM_DEF = os.path.join(SCRIPT_DIR, "custom-colors.def")
+else:
+    CUSTOM_DEF = os.path.join(
+        os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+        "celestial-theme-forge", "custom-colors.def")
 HEX_RE = re.compile(r"^#?[0-9a-fA-F]{6}$")
 USER_AGENT = "celestial-theme-forge/1.0"  # api.color.pizza 403s the default urllib UA
 # color-names lists to sample for varied suggestions (api.color.pizza).
@@ -55,7 +63,7 @@ def custom_names():
     """Names recorded in custom-colors.def — rebuildable, so not blocked."""
     names = set()
     try:
-        for line in open(os.path.join(SCRIPT_DIR, "custom-colors.def"), encoding="utf-8"):
+        for line in open(CUSTOM_DEF, encoding="utf-8"):
             line = line.strip()
             if line and not line.startswith("#"):
                 names.add(line.split()[0])

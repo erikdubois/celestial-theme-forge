@@ -70,7 +70,14 @@ declare -A COLORS=(
 # Stable display/iteration order (existing 4 first, then new alphabetical).
 EXISTING=(sea aliz azul pueril)
 NEUTRAL_SCOLOR="#222222"   # all new colours share aliz's neutral dark chrome
-CUSTOM_DEF="${SCRIPT_DIR}/custom-colors.def"  # user-picked colours (name hex)
+# User-picked colours (name hex). In a writable dev checkout this stays in-tree
+# (so the committed file keeps working); from a read-only install (/usr/share) it
+# falls back to a per-user XDG path.
+if [ -w "$SCRIPT_DIR" ]; then
+  CUSTOM_DEF="${SCRIPT_DIR}/custom-colors.def"
+else
+  CUSTOM_DEF="${XDG_CONFIG_HOME:-$HOME/.config}/celestial-theme-forge/custom-colors.def"
+fi
 CURATED=("${!COLORS[@]}")  # curated names, snapshot before merging customs
 
 # Merge user-picked colours from custom-colors.def into COLORS and (re)compute
@@ -123,6 +130,7 @@ add_custom_color() {
   for existing in "${EXISTING[@]}" "${CURATED[@]}"; do
     [ "$existing" = "$name" ] && { log_error "--add: '$name' is a built-in colour name"; exit 3; }
   done
+  mkdir -p "$(dirname "$CUSTOM_DEF")"
   [ -f "$CUSTOM_DEF" ] || echo "# User-picked colours (name hex). Appended by theme-forge-picker / --add." > "$CUSTOM_DEF"
   grep -qiE "^${name}[[:space:]]" "$CUSTOM_DEF" || printf '%s %s\n' "$name" "$hex" >> "$CUSTOM_DEF"
   merge_custom_colors

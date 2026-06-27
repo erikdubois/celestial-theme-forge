@@ -29,10 +29,18 @@ package() {
   install -Dm755 arc-colors-scss.py     "$sharedir/arc-colors-scss.py"
   install -Dm755 theme-forge-picker.py  "$sharedir/theme-forge-picker.py"
 
-  # Wrappers on PATH
+  # Wrappers on PATH — exec the real scripts so they resolve their own
+  # location (BASH_SOURCE / __file__) to the share dir, not /usr/bin.
   install -d "$pkgdir/usr/bin"
-  ln -s "/usr/share/$pkgname/generate-arc-colors.sh" "$pkgdir/usr/bin/celestial-theme-forge"
-  ln -s "/usr/share/$pkgname/theme-forge-picker.py"  "$pkgdir/usr/bin/theme-forge-picker"
+  printf '#!/bin/bash\nexec /usr/share/%s/generate-arc-colors.sh "$@"\n' \
+    "$pkgname" > "$pkgdir/usr/bin/celestial-theme-forge"
+  printf '#!/bin/bash\nexec python3 /usr/share/%s/theme-forge-picker.py "$@"\n' \
+    "$pkgname" > "$pkgdir/usr/bin/theme-forge-picker"
+  chmod 755 "$pkgdir/usr/bin/celestial-theme-forge" "$pkgdir/usr/bin/theme-forge-picker"
+
+  # Desktop entry (app-menu launcher for the GUI)
+  install -Dm644 theme-forge-picker.desktop \
+    "$pkgdir/usr/share/applications/theme-forge-picker.desktop"
 
   # Docs
   install -Dm644 README.md    "$pkgdir/usr/share/doc/$pkgname/README.md"

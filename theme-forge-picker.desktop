@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Celestial Theme Forge
+GenericName=Theme Colour Generator
+Comment=Pick a colour and build a Celestial GTK theme variant
+Exec=theme-forge-picker
+Icon=preferences-desktop-theme
+Terminal=false
+Categories=Settings;DesktopSettings;GTK;
+Keywords=theme;colour;color;celestial;gtk;arc;
+StartupNotify=true

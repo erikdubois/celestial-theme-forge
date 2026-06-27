@@ -21,6 +21,17 @@
 - Added `theme-forge-picker.py`, a GTK4 app to pick a colour, research its name
   online and build+install a theme without hand-editing the generator. Backed by
   a new `--add NAME HEX` generator flag and a persistent `custom-colors.def`.
+- Added a `PKGBUILD` (`celestial-theme-forge`, CalVer `26.06`) packaging the
+  tooling into `/usr/share/celestial-theme-forge/` with `celestial-theme-forge`
+  and `theme-forge-picker` exec wrappers on PATH. Wrappers `exec` the real
+  scripts (not symlinks) so `BASH_SOURCE`/`__file__` resolve to the share dir and
+  sibling scripts are found.
+- Made `custom-colors.def` location writable-aware: in-tree for a writable dev
+  checkout, else `$XDG_CONFIG_HOME/celestial-theme-forge/custom-colors.def`. This
+  lets `--add` and the GUI's Create button work from the read-only installed copy.
+- Added `theme-forge-picker.desktop` (installed to `/usr/share/applications/`) so
+  the GUI appears in the application menu under Settings. Uses the stock
+  `preferences-desktop-theme` icon.
 
 ### Technical Details (picker)
 
