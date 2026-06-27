@@ -38,9 +38,10 @@
   `show_editor=True` + `set_rgba()`, seeded from the live entry value.
 - Picker now shows a "Recent" strip of 10 colour slots (click a filled swatch to
   restore it). Always shows all 10 squares — empty ones as faint outlined
-  placeholders that fill with real swatches (newest first) as you build.
-  Persisted in `$XDG_CONFIG_HOME/celestial-theme-forge/recent-colors`; recorded
-  on Create, deduped and capped at 10.
+  placeholders that fill left→right as you pick colours. A colour is recorded
+  when you exit the picker (Choose… or Pick from screen), deduped; the 11th pick
+  drops the oldest (leftmost). Persisted in
+  `$XDG_CONFIG_HOME/celestial-theme-forge/recent-colors`.
 
 ### Technical Details (picker)
 

@@ -263,9 +263,11 @@ class PickerWindow(Gtk.ApplicationWindow):
         ctx.stroke()
 
     def _remember_color(self, hexv):
+        # Append newest at the end; when an 11th arrives, the oldest (slot 1,
+        # leftmost) drops off the front.
         hexv = ("#" + hexv.lstrip("#")).lower()
-        self.recent = [hexv] + [c for c in self.recent if c != hexv]
-        self.recent = self.recent[:RECENT_MAX]
+        self.recent = [c for c in self.recent if c != hexv] + [hexv]
+        self.recent = self.recent[-RECENT_MAX:]
         save_recent(self.recent)
         self._refresh_recent()
 
@@ -304,7 +306,9 @@ class PickerWindow(Gtk.ApplicationWindow):
 
     def _on_chosen(self, dialog, response):
         if response == Gtk.ResponseType.OK:
-            self._set_hex_from_rgba(dialog.get_rgba())
+            rgba = dialog.get_rgba()
+            self._set_hex_from_rgba(rgba)
+            self._remember_color(self._current_hex() or rgba.to_string())
         dialog.destroy()
 
     def _set_hex_from_rgba(self, rgba):
@@ -326,6 +330,7 @@ class PickerWindow(Gtk.ApplicationWindow):
             hexv = ""
         if HEX_RE.match(hexv):
             GLib.idle_add(self.hex_entry.set_text, hexv.lower())
+            GLib.idle_add(self._remember_color, hexv.lower())
 
     # ── name research callbacks ─────────────────────────────────────────
     def _on_lookup(self, _widget):
@@ -391,7 +396,6 @@ class PickerWindow(Gtk.ApplicationWindow):
         name = sanitize_name(self.name_entry.get_text())
         if not (hexv and name) or self._busy:
             return
-        self._remember_color(hexv)
         self._busy = True
         self.create_btn.set_sensitive(False)
         self.create_spinner.start()
