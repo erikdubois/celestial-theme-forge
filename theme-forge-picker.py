@@ -229,9 +229,12 @@ class PickerWindow(Gtk.ApplicationWindow):
             nxt = child.get_next_sibling()
             self.recent_box.remove(child)
             child = nxt
-        for hexv in self.recent:
-            self.recent_box.append(self._recent_swatch(hexv))
-        self.recent_row.set_visible(bool(self.recent))
+        # Always show RECENT_MAX slots: filled ones first, empty placeholders after.
+        for i in range(RECENT_MAX):
+            if i < len(self.recent):
+                self.recent_box.append(self._recent_swatch(self.recent[i]))
+            else:
+                self.recent_box.append(self._empty_swatch())
 
     def _recent_swatch(self, hexv):
         rgba = Gdk.RGBA()
@@ -241,8 +244,23 @@ class PickerWindow(Gtk.ApplicationWindow):
             lambda _a, ctx, w, h, c=rgba: (ctx.set_source_rgb(c.red, c.green, c.blue),
                                            ctx.rectangle(0, 0, w, h), ctx.fill()))
         btn = Gtk.Button(child=area, tooltip_text=hexv)
+        btn.add_css_class("flat")
         btn.connect("clicked", lambda _b, h=hexv: self.hex_entry.set_text(h))
         return btn
+
+    def _empty_swatch(self):
+        area = Gtk.DrawingArea(content_width=22, content_height=18)
+        area.set_draw_func(self._draw_empty_slot)
+        btn = Gtk.Button(child=area, sensitive=False)
+        btn.add_css_class("flat")
+        return btn
+
+    @staticmethod
+    def _draw_empty_slot(_a, ctx, w, h):
+        ctx.set_source_rgba(0.5, 0.5, 0.5, 0.4)
+        ctx.set_line_width(1)
+        ctx.rectangle(0.5, 0.5, w - 1, h - 1)
+        ctx.stroke()
 
     def _remember_color(self, hexv):
         hexv = ("#" + hexv.lstrip("#")).lower()
