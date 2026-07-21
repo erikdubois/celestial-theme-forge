@@ -35,7 +35,7 @@ renderer, all of which were made data-driven (no more hardcoded 4 names).
 
 | File | Role |
 |------|------|
-| `generate-arc-colors.sh` | Main generator: writes `colors.def`, clones aliz's SCSS blocks, entry files, vector/text sources and assets, recolours each onto its accent. Idempotent. |
+| `generate-arc-colors.sh` | Main generator: writes `colors.def`, clones aliz's SCSS blocks, entry files, vector/text sources, assets and Kvantum (Qt) themes, recolours each onto its accent. Idempotent. |
 | `arc-colors-recolor.py` | Recolours one asset by isolating accent hexes via the aliz-minus-azul diff and reprojecting them onto the target hue. |
 | `arc-colors-scss.py` | Clones the per-colour `@if $color == "aliz"` SCSS blocks. |
 | `render-all.sh` | Renders all per-colour PNG assets in parallel across CPU cores (resumable). |
@@ -125,9 +125,12 @@ export CELESTIAL_DIR=/tmp/celestial-gtk-theme   # or wherever your checkout is
 # 3. Render all PNG assets in parallel (~1h on 16 cores; resumable)
 ./render-all.sh
 
-# 4. Install into ~/.themes
-"$CELESTIAL_DIR/install.sh"
+# 4. Install into ~/.themes (-k also installs the Qt/Kvantum themes)
+"$CELESTIAL_DIR/install.sh" -k
 ```
+
+Kvantum themes land in `~/.config/Kvantum/Celestial-<Colour>[-Dark|-Light]`; pick
+one once in **Kvantum Manager** and Qt apps follow the GTK accent.
 
 To add or change a colour, edit the `COLORS` map at the top of
 `generate-arc-colors.sh` (lowercase name → accent hex, hyphens kept) and re-run

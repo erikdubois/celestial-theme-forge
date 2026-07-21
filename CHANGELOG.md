@@ -4,6 +4,12 @@
 
 ### What Changed
 
+- Kvantum (Qt) themes are now generated for every colour. Upstream ships Kvantum
+  themes only for its 4 stock colours, so `install.sh -k` printed "not found,
+  skipping" for generated colours and Qt apps stayed on a stock accent while GTK,
+  xfwm4 and plank followed the new one. The picker now passes `-k`, so a picked
+  colour themes Qt apps too.
+
 - Picker: new "4. Kiro: GTK_THEME override" section, shown only on Kiro. Kiro ships
   `GTK_THEME="Arc-Dawn-Dark"` in `/etc/environment`; while active it overrides every
   GTK theme, so a freshly built celestial theme silently does nothing. One button
@@ -12,6 +18,16 @@
 
 ### Technical Details
 
+- `gen_kvantum()` clones aliz's three `src/Kvantum/Celestial-Aliz*` dirs (`.kvconfig`
+  + `.svg`) and recolours them with the existing `arc-colors-recolor.py` — no code
+  change needed there: the files go through the single-file branch of `iter_pairs()`,
+  and `HEX_RE` matches only 6 digits so the kvconfig's alpha suffixes (`#f0544cc0`)
+  survive. Each aliz/azul pair yields exactly one accent hex (`f0544c`), no shades.
+- Kvantum is the only surface using capitalised names. `install.sh` uppercases just
+  the first letter (`sed 's/.*/\u&/'`), so the generator uses `${c^}` to match:
+  `red-orange` → `Celestial-Red-orange`, not `-Red-Orange`. Because `install.sh`
+  already derives its variant list from `colors.def`, it needed no patch — only the
+  source dirs were missing.
 - Kiro detection is `IMAGE_ID=kiro` in `/etc/os-release` (`ID` is still `arch`).
   The section is also hidden if no `GTK_THEME` line exists at all.
 - Toggle runs `pkexec /usr/bin/sed -i` (a polkit agent is part of every Kiro
@@ -25,7 +41,9 @@
 
 ### Files Modified
 
+- `generate-arc-colors.sh`
 - `theme-forge-picker.py`
+- `README.md`
 
 ---
 

@@ -265,6 +265,31 @@ recolor_text() {
   done
 }
 
+# Clone + recolour the Kvantum (Qt) theme dirs for one colour.
+# Kvantum is the only surface that names variants Celestial-<Cap>; install.sh
+# uppercases just the first letter (sed '\u&'), which ${c^} matches exactly --
+# "red-orange" must become "Celestial-Red-orange", not "Celestial-Red-Orange".
+gen_kvantum() {
+  local c="$1" hex="#${COLORS[$1]}"
+  local cap="${c^}" tc="${TEMPLATE^}" sc="${SIBLING^}"
+  local kv="${SRC}/Kvantum" v src_dir dst_dir
+  [ -d "$kv" ] || return 0
+  for v in "" "-Dark" "-Light"; do
+    src_dir="${kv}/Celestial-${tc}${v}"
+    dst_dir="${kv}/Celestial-${cap}${v}"
+    [ -d "$src_dir" ] || continue
+    mkdir -p "$dst_dir"
+    # "Aliz" occurs only in the comment= line, so a global swap is safe.
+    sed "s/${tc}/${cap}/g" \
+      "${src_dir}/Celestial-${tc}${v}.kvconfig" > "${dst_dir}/Celestial-${cap}${v}.kvconfig"
+    cp "${src_dir}/Celestial-${tc}${v}.svg" "${dst_dir}/Celestial-${cap}${v}.svg"
+    python3 "$RECOLOR" "$hex" \
+      "${kv}/Celestial-${sc}${v}/Celestial-${sc}${v}.kvconfig" "${dst_dir}/Celestial-${cap}${v}.kvconfig" \
+      "${kv}/Celestial-${sc}${v}/Celestial-${sc}${v}.svg"      "${dst_dir}/Celestial-${cap}${v}.svg" \
+      >/dev/null
+  done
+}
+
 # Hue-rotate aliz PNG previews/buttons (no vector source) onto the target hue.
 png_recolor() {
   local c="$1" hex="$2" hp f out
@@ -300,6 +325,7 @@ main() {
     log_info "[$i/${#targets[@]}] $c (#${COLORS[$c]})"
     gen_entries "$c"
     gen_assets "$c"
+    gen_kvantum "$c"
   done
   log_success "$(basename "$0") done -- run parse_sass.sh + src/*/render-assets.sh to build, then install.sh"
 }
