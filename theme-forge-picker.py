@@ -544,7 +544,10 @@ class PickerWindow(Gtk.ApplicationWindow):
     # ── theme source ─────────────────────────────────────────────────────
     def _refresh_source_state(self):
         ready = celestial_dir_valid(CELESTIAL_DIR)
-        self.source_btn.set_visible(not ready)
+        self.source_btn.set_label("Re-clone theme source" if ready else "Clone theme source")
+        self.source_btn.set_tooltip_text(
+            f"Delete {CELESTIAL_DIR} and clone it again" if ready
+            else f"Clone the celestial theme into {CELESTIAL_DIR}")
         if ready:
             self.source_label.set_text(f"Theme source: {CELESTIAL_DIR}")
         else:
@@ -555,15 +558,39 @@ class PickerWindow(Gtk.ApplicationWindow):
     def _on_get_source(self, _widget):
         if self._busy:
             return
+        if not celestial_dir_valid(CELESTIAL_DIR):
+            self._start_source_fetch(force=False)
+            return
+        # Re-clone throws away the whole checkout — every rendered asset and any
+        # local edit — so name the path and make the user say so.
+        dialog = Gtk.AlertDialog(
+            message="Re-clone the theme source?",
+            detail=f"{CELESTIAL_DIR} will be deleted and cloned again.\n"
+                   "All rendered assets and any local changes there are lost.",
+            buttons=["Cancel", "Re-clone"], cancel_button=0, default_button=0)
+        dialog.choose(self, None, self._on_reclone_answer)
+
+    def _on_reclone_answer(self, dialog, result):
+        try:
+            confirmed = dialog.choose_finish(result) == 1
+        except GLib.Error:  # dismissed with Escape
+            confirmed = False
+        if confirmed:
+            self._start_source_fetch(force=True)
+
+    def _start_source_fetch(self, force):
         self._busy = True
         self.source_btn.set_sensitive(False)
         self._refresh_create_sensitivity()
-        self.log(f"\n=== Fetching celestial theme source into {CELESTIAL_DIR} ===\n")
-        threading.Thread(target=self._source_worker, daemon=True).start()
+        verb = "Re-cloning" if force else "Fetching"
+        self.log(f"\n=== {verb} celestial theme source into {CELESTIAL_DIR} ===\n")
+        threading.Thread(target=self._source_worker, args=(force,), daemon=True).start()
 
-    def _source_worker(self):
+    def _source_worker(self, force):
         argv = [sys.executable, os.path.join(SCRIPT_DIR, "prepare-celestial.py"),
                 "--dir", CELESTIAL_DIR]
+        if force:
+            argv.append("--force")
         try:
             proc = subprocess.Popen(argv, cwd=SCRIPT_DIR, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT, text=True)

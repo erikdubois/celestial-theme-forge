@@ -154,6 +154,31 @@
 
 - `theme-forge-picker.py`
 
+---
+
+- The theme-source button is now permanent instead of disappearing once a
+  checkout exists, and can re-clone: **Clone theme source** when none is found,
+  **Re-clone theme source** when one is.
+
+### Technical Details
+
+- `prepare-celestial.py --force` removes the target and clones it again; without
+  it the script still only clones when missing, so ordinary runs stay a no-op
+  patch pass.
+- A re-clone destroys the whole checkout — every rendered asset (~630M after a
+  full run) and any local edit — so the button opens a `Gtk.AlertDialog` naming
+  the exact path, defaulting to Cancel, before anything is deleted. Only the
+  confirmed path passes `--force`. Escape-dismissal raises `GLib.Error` from
+  `choose_finish` and is treated as a cancel.
+- Verified by driving the button: visible and labelled "Clone theme source" when
+  missing; after cloning it stays visible and relabels to "Re-clone theme
+  source"; clicking it then opens a dialog and starts nothing; the confirmed
+  path removes a marker file planted in the checkout and clones afresh.
+
+### Files Modified
+
+- `theme-forge-picker.py`, `prepare-celestial.py`
+
 ## 2026.06.27
 
 ### What Changed

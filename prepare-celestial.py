@@ -2,6 +2,7 @@
 """Clone celestial-gtk-theme if absent and patch it to be colors.def-driven."""
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 
@@ -231,9 +232,14 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--dir", default=DEFAULT_DIR,
                     help=f"celestial checkout to prepare (default: {DEFAULT_DIR})")
+    ap.add_argument("--force", action="store_true",
+                    help="delete an existing checkout and clone it again")
     args = ap.parse_args()
     dest = args.dir
 
+    if args.force and os.path.isdir(dest):
+        log(f"Removing {dest}")
+        shutil.rmtree(dest)
     if not os.path.isdir(os.path.join(dest, "src", "gtk")):
         clone(dest)
 
