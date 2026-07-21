@@ -125,6 +125,35 @@
 
 - `theme-forge-picker.py`, `README.md`, `PKGBUILD`
 
+---
+
+- Fixed **Pick from screen** doing nothing on Hyprland: the loupe appeared and a
+  colour could be picked, but it never reached the swatch.
+
+### Technical Details
+
+- Cause was the `-q` flag added with the Wayland support. hyprpicker emits the
+  picked colour through its own logger at level `NONE`, and `Debug::log` opens
+  with `if (quiet && level != ERR && level != CRIT) return;` — so `--quiet`
+  suppresses the result itself. It exited 0 with empty stdout, `HEX_RE` rejected
+  the empty string, and `_eyedropper_worker` returned without touching the UI:
+  the same silent no-op path as a cancelled pick.
+- Dropping `-q` alone is not enough — without it hyprpicker writes `[WARN]`
+  lines (unsupported `wp_viewporter` / `wp_fractional_scale_v1`) to stdout, and
+  the old code stripped the whole of stdout and matched that. `extract_hex()`
+  now scans the lines in reverse for the first that matches `HEX_RE`, so log
+  noise before the result is ignored and a run with no result still yields ''.
+- `-b` is kept although hyprpicker already disables fancy output when stdout is
+  not a TTY; it makes the intent explicit and covers a TTY-attached run, where
+  the colour would otherwise be wrapped in ANSI escapes that `HEX_RE` rejects.
+- Verified: `extract_hex` over five outputs (bare hex, warning + hex, warnings
+  only, empty, critical-only), and the Wayland path end-to-end against a stub
+  reproducing hyprpicker's warning-then-hex output.
+
+### Files Modified
+
+- `theme-forge-picker.py`
+
 ## 2026.06.27
 
 ### What Changed

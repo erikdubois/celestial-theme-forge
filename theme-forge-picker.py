@@ -47,8 +47,10 @@ FUNDING = [
 # belongs to XWayland and holds no composited output, so xcolor there returns a
 # bogus colour (usually black) rather than failing — hence a per-session tool.
 # -b drops the ANSI colouring hyprpicker otherwise wraps its output in.
+# No -q for hyprpicker: it emits the picked colour through its own logger at a
+# level --quiet suppresses, so quiet mode returns success with empty output.
 EYEDROPPER_X11 = ["xcolor", "--format", "hex"]
-EYEDROPPER_WAYLAND = ["hyprpicker", "-f", "hex", "-l", "-b", "-q"]
+EYEDROPPER_WAYLAND = ["hyprpicker", "-f", "hex", "-l", "-b"]
 CSS = b"""
 label#title { font-size: 20px; font-weight: 600; }
 .support-button { color: #e0567a; }
@@ -90,6 +92,14 @@ CELESTIAL_DEFAULT_DIR = "/tmp/celestial-gtk-theme"
 def celestial_dir_valid(path):
     return os.path.isdir(os.path.join(path, "src", "gtk")) and \
         os.path.isfile(os.path.join(path, "install.sh"))
+
+
+def extract_hex(stdout):
+    """Last hex line in a picker's output ('' if none) — hyprpicker also logs warnings."""
+    for line in reversed(stdout.splitlines()):
+        if HEX_RE.match(line.strip()):
+            return line.strip()
+    return ""
 
 
 def eyedropper_argv():
@@ -471,7 +481,7 @@ class PickerWindow(Gtk.ApplicationWindow):
     def _eyedropper_worker(self, argv):
         try:
             out = subprocess.run(argv, capture_output=True, text=True, timeout=60)
-            hexv = out.stdout.strip()
+            hexv = extract_hex(out.stdout)
         except (OSError, subprocess.TimeoutExpired):
             hexv = ""
         if HEX_RE.match(hexv):
