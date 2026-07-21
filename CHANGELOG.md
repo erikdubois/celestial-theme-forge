@@ -27,6 +27,46 @@
 
 - `theme-forge-picker.py`
 
+---
+
+- Made the forge run on any Arch system instead of assuming a theme checkout at
+  one hardcoded path. Added `prepare-celestial.py`, which clones
+  celestial-gtk-theme and patches it to be `colors.def`-driven, so a fresh
+  machine goes clone → build with no manual preparation. The picker gained a
+  **Get theme source** button for the same thing.
+
+### Technical Details
+
+- `celestial-dir.sh` is now the single definition of the lookup order
+  (`$CELESTIAL_DIR` → this tree → sibling `../celestial-gtk-theme` →
+  `/tmp/celestial-gtk-theme`), sourced by `generate-arc-colors.sh` and
+  `render-all.sh`; `theme-forge-picker.py` mirrors it in Python. The sibling
+  step is what keeps an existing `DATA/celestial-gtk-theme` working without a
+  username appearing anywhere. `celestial_require_dir` aborts with the exact
+  `prepare-celestial.py` command to run rather than failing deep in a render.
+- Cloned checkouts default to `/tmp`: always writable, no assumption about the
+  home layout. Ephemeral, hence `CELESTIAL_DIR` for a checkout worth keeping.
+- Upstream celestial hardcodes the four stock colour names in `install.sh`,
+  `parse_sass.sh`, three `render-assets.sh` and `render-plank-themes.sh` — the
+  edits making them data-driven had only ever existed as uncommitted local
+  changes. `prepare-celestial.py` now carries them as exact-string anchor →
+  replacement pairs, skips a patch whose replacement is already present, and
+  `sys.exit`s if an anchor is missing so an upstream change surfaces instead of
+  producing a half-patched tree. The plank loop patch carries a following line
+  as context because `PLANK_EXTEND` introduces an identical loop header.
+- Verified against a fresh clone: five of the six patched files come out
+  byte-identical to the hand-patched working checkout (`install.sh` differs only
+  in upstream's version string, 1.3.5 vs 1.3.3), the run is idempotent, and
+  generate → `parse_sass.sh` compiles a colour in the /tmp clone.
+- Picker: "Create theme" stays insensitive while no valid checkout is resolved.
+- `git` moved from `makedepends` to `depends` — it is now needed at runtime.
+
+### Files Modified
+
+- `celestial-dir.sh` (new), `prepare-celestial.py` (new)
+- `generate-arc-colors.sh`, `render-all.sh`, `theme-forge-picker.py`
+- `README.md`, `CLAUDE.md`, `PKGBUILD`
+
 ## 2026.06.27
 
 ### What Changed

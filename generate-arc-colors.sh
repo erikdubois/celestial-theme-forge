@@ -22,12 +22,9 @@ set -euo pipefail
 #   55-colour kiro-arc collection while reusing celestial's own assets.
 #####################################################################
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-# Target celestial checkout: use $CELESTIAL_DIR if set, else this script's dir
-# when it sits inside the repo, else the default checkout path (theme-forge).
-if [ -z "${CELESTIAL_DIR:-}" ]; then
-  if [ -d "${SCRIPT_DIR}/src/gtk" ]; then CELESTIAL_DIR="${SCRIPT_DIR}"
-  else CELESTIAL_DIR="/home/erik/DATA/celestial-gtk-theme"; fi
-fi
+# Target celestial checkout — resolution order lives in celestial-dir.sh.
+source "${SCRIPT_DIR}/celestial-dir.sh"
+celestial_require_dir "${SCRIPT_DIR}"
 SRC="${CELESTIAL_DIR}/src"
 RECOLOR="${SCRIPT_DIR}/arc-colors-recolor.py"
 SCSS_GEN="${SCRIPT_DIR}/arc-colors-scss.py"

@@ -4,9 +4,11 @@
 
 The reproducible generator that adds the 54-colour Arc palette to the Celestial
 GTK theme. This folder is **tooling only** — the theme source and built output
-live in the celestial checkout (default `/home/erik/DATA/celestial-gtk-theme`,
-override with `CELESTIAL_DIR`). See [README.md](./README.md) for the full
-workflow.
+live in the celestial checkout. That checkout is resolved by
+[celestial-dir.sh](./celestial-dir.sh) / `resolve_celestial_dir()`:
+`$CELESTIAL_DIR` → this folder → sibling `../celestial-gtk-theme` →
+`/tmp/celestial-gtk-theme`. No path is tied to a username. See
+[README.md](./README.md) for the full workflow.
 
 ## Key decisions (don't relearn these)
 
@@ -26,6 +28,10 @@ workflow.
   are hue-rotated with ImageMagick `-modulate` instead of the precise recolour.
 - `colors.def` is the single source of truth; celestial's `install.sh`,
   `parse_sass.sh`, `render-assets.sh` (×3) and plank renderer source it.
+- **Upstream does not ship those data-driven edits** — `prepare-celestial.py`
+  applies them to any checkout via exact-string anchors, idempotently, and
+  `sys.exit`s if an anchor is gone (upstream moved) rather than half-patching.
+  Its output was verified byte-identical to the hand-patched working checkout.
 
 ## Gotchas
 

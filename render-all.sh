@@ -24,10 +24,8 @@ set -uo pipefail
 #   CELESTIAL_DIR=/path ./render-all.sh
 #####################################################################
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-if [ -z "${CELESTIAL_DIR:-}" ]; then
-  if [ -d "${SCRIPT_DIR}/src/gtk" ]; then CELESTIAL_DIR="${SCRIPT_DIR}"
-  else CELESTIAL_DIR="/home/erik/DATA/celestial-gtk-theme"; fi
-fi
+source "${SCRIPT_DIR}/celestial-dir.sh"
+celestial_require_dir "${SCRIPT_DIR}"
 source "${CELESTIAL_DIR}/src/colors.def"
 
 JOBS="${JOBS:-$(nproc)}"

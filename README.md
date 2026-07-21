@@ -40,6 +40,8 @@ renderer, all of which were made data-driven (no more hardcoded 4 names).
 | `arc-colors-scss.py` | Clones the per-colour `@if $color == "aliz"` SCSS blocks. |
 | `render-all.sh` | Renders all per-colour PNG assets in parallel across CPU cores (resumable). |
 | `theme-forge-picker.py` | GTK4 app: pick a colour (screen eyedropper or swatch), look up real names online, then generate → build → install it into `~/.themes`. |
+| `prepare-celestial.py` | Clones a celestial checkout if missing and patches it to be `colors.def`-driven. Idempotent. |
+| `celestial-dir.sh` | Sourced helper: the single definition of how `CELESTIAL_DIR` is resolved. |
 | `custom-colors.def` | Persistent `name hex` list of colours added via the picker / `--add` (created on first use). Merged into the generator's colour set so picks are reproducible. |
 
 ## Pick a colour interactively
@@ -68,14 +70,42 @@ Headless equivalent (skips the GUI, adds + builds one colour):
 ## Prerequisites
 
 ```bash
-sudo pacman -S sassc inkscape python imagemagick   # optipng optional (shrinks PNGs)
-sudo pacman -S python-gobject gtk4 xcolor          # for theme-forge-picker.py (xcolor = screen eyedropper)
+sudo pacman -S git sassc inkscape python imagemagick   # optipng optional (shrinks PNGs)
+sudo pacman -S python-gobject gtk4 xcolor              # for theme-forge-picker.py (xcolor = screen eyedropper)
 ```
+
+## The theme checkout
+
+The forge generates *into* a celestial-gtk-theme checkout. It finds one in this
+order:
+
+1. `$CELESTIAL_DIR`
+2. this folder, if the theme source sits here too (`src/gtk` present)
+3. `../celestial-gtk-theme` — a sibling of this folder
+4. `/tmp/celestial-gtk-theme` — where a cloned checkout lands
+
+Nothing there yet? Get one with:
+
+```bash
+./prepare-celestial.py                       # clones into /tmp/celestial-gtk-theme
+./prepare-celestial.py --dir ~/celestial-gtk-theme
+```
+
+That clones upstream **and** patches it to be `colors.def`-driven, which the
+generator requires (upstream hardcodes the four stock colour names in
+`install.sh`, `parse_sass.sh`, the three `render-assets.sh` and
+`render-plank-themes.sh`). It is idempotent — safe to re-run — and aborts loudly
+rather than half-patching if upstream has moved. The picker exposes the same
+thing as a **Get theme source** button, shown only when no checkout is found.
+
+/tmp is the default because it is always writable and needs no assumptions about
+your home layout; it is also wiped on reboot, so set `CELESTIAL_DIR` to keep a
+checkout (a full render is ~630M).
 
 ## Rerun from scratch (e.g. after a celestial upgrade)
 
 ```bash
-export CELESTIAL_DIR=/home/erik/DATA/celestial-gtk-theme   # target checkout
+export CELESTIAL_DIR=/tmp/celestial-gtk-theme   # or wherever your checkout is
 
 # 1. Generate every per-colour source file + colors.def (fast, ~30s)
 ./generate-arc-colors.sh
@@ -96,11 +126,9 @@ To add or change a colour, edit the `COLORS` map at the top of
 the steps above. The generator strips and re-inserts its own SCSS blocks, so
 re-running never duplicates.
 
-## Caveat for a *fresh* upstream clone
+## Starting from a pristine upstream clone
 
-The generator assumes celestial's consumer scripts are already data-driven
-(they source `src/colors.def`) and that `colors.def` exists. In Erik's working
-checkout these patches are committed. If you start from a pristine upstream
-clone, you must first re-apply those edits to `install.sh`, `parse_sass.sh`,
-`src/{gtk,gtk-2.0,xfwm4}/render-assets.sh` and `src/plank/render-plank-themes.sh`
-(see that checkout's git history / CHANGELOG entry dated 2026-06-27).
+Nothing extra to do — `prepare-celestial.py` applies the data-driven edits to
+`install.sh`, `parse_sass.sh`, `src/{gtk,gtk-2.0,xfwm4}/render-assets.sh` and
+`src/plank/render-plank-themes.sh` for you. Run it against any checkout, fresh
+or existing.

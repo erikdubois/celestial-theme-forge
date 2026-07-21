@@ -60,13 +60,26 @@ def gtk_theme_state():
     return None
 
 
+# Cloned checkouts land in /tmp: throwaway, always writable, no assumptions
+# about the user's home layout. Mirrors celestial-dir.sh.
+CELESTIAL_DEFAULT_DIR = "/tmp/celestial-gtk-theme"
+
+
+def celestial_dir_valid(path):
+    return os.path.isdir(os.path.join(path, "src", "gtk")) and \
+        os.path.isfile(os.path.join(path, "install.sh"))
+
+
 def resolve_celestial_dir():
+    """$CELESTIAL_DIR, else this tree, else a sibling checkout, else the /tmp default."""
     env = os.environ.get("CELESTIAL_DIR")
     if env:
         return env
-    if os.path.isdir(os.path.join(SCRIPT_DIR, "src", "gtk")):
-        return SCRIPT_DIR
-    return "/home/erik/DATA/celestial-gtk-theme"
+    for candidate in (SCRIPT_DIR,
+                      os.path.join(os.path.dirname(SCRIPT_DIR), "celestial-gtk-theme")):
+        if celestial_dir_valid(candidate):
+            return candidate
+    return CELESTIAL_DEFAULT_DIR
 
 
 CELESTIAL_DIR = resolve_celestial_dir()
@@ -171,6 +184,16 @@ class PickerWindow(Gtk.ApplicationWindow):
                       margin_top=14, margin_bottom=14, margin_start=14, margin_end=14)
         self.set_child(box)
 
+        # ── theme source ────────────────────────────────────────────────
+        srow = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        self.source_label = Gtk.Label(xalign=0, hexpand=True, wrap=True)
+        self.source_label.add_css_class("dim-label")
+        self.source_btn = Gtk.Button(label="Get theme source")
+        self.source_btn.connect("clicked", self._on_get_source)
+        srow.append(self.source_label)
+        srow.append(self.source_btn)
+        box.append(srow)
+
         # ── colour input ────────────────────────────────────────────────
         box.append(self._heading("1. Pick a colour"))
         crow = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -252,6 +275,7 @@ class PickerWindow(Gtk.ApplicationWindow):
         scroller.set_child(self.log_view)
         box.append(scroller)
 
+        self._refresh_source_state()
         self._on_name_changed(self.name_entry)
 
     # ── small helpers ──────────────────────────────────────────────────
@@ -428,10 +452,46 @@ class PickerWindow(Gtk.ApplicationWindow):
         self.name_hint.set_text(hints[self._name_status(name)])
         self._refresh_create_sensitivity()
 
+    # ── theme source ─────────────────────────────────────────────────────
+    def _refresh_source_state(self):
+        ready = celestial_dir_valid(CELESTIAL_DIR)
+        self.source_btn.set_visible(not ready)
+        if ready:
+            self.source_label.set_text(f"Theme source: {CELESTIAL_DIR}")
+        else:
+            self.source_label.set_text(
+                f"No theme source at {CELESTIAL_DIR} — clone and prepare it first.")
+        self._refresh_create_sensitivity()
+
+    def _on_get_source(self, _widget):
+        if self._busy:
+            return
+        self._busy = True
+        self.source_btn.set_sensitive(False)
+        self._refresh_create_sensitivity()
+        self.log(f"\n=== Fetching celestial theme source into {CELESTIAL_DIR} ===\n")
+        threading.Thread(target=self._source_worker, daemon=True).start()
+
+    def _source_worker(self):
+        argv = [os.path.join(SCRIPT_DIR, "prepare-celestial.py"), "--dir", CELESTIAL_DIR]
+        proc = subprocess.Popen(argv, cwd=SCRIPT_DIR, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True)
+        for line in proc.stdout:
+            GLib.idle_add(self.log, line)
+        GLib.idle_add(self._source_done, proc.wait())
+
+    def _source_done(self, rc):
+        self._busy = False
+        self.source_btn.set_sensitive(True)
+        if rc != 0:
+            self.log(f"\n*** Could not prepare the theme source (exit {rc}) ***\n")
+        self._refresh_source_state()
+
     # ── create / build pipeline ──────────────────────────────────────────
     def _refresh_create_sensitivity(self):
         name = sanitize_name(self.name_entry.get_text())
-        ok = bool(self._current_hex()) and self._name_status(name) in ("new", "rebuild")
+        ok = (bool(self._current_hex()) and self._name_status(name) in ("new", "rebuild")
+              and celestial_dir_valid(CELESTIAL_DIR))
         self.create_btn.set_sensitive(ok and not self._busy)
 
     def _on_create(self, _widget):
