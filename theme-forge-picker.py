@@ -32,6 +32,32 @@ RECENT_FILE = os.path.join(
     os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
     "celestial-theme-forge", "recent-colors")
 RECENT_MAX = 10
+# Kiro ships GTK_THEME="Arc-Dawn-Dark" in /etc/environment; while it is active it
+# overrides every GTK theme, so a freshly built celestial theme appears to do nothing.
+ENVIRONMENT_FILE = "/etc/environment"
+GTK_THEME_RE = re.compile(r"^(\s*)(#+\s*)?(GTK_THEME=.*)$")
+TERMINALS = ["alacritty", "kitty", "foot", "wezterm", "xfce4-terminal", "gnome-terminal", "xterm"]
+
+
+def is_kiro():
+    """True on a Kiro install (Arch-based, tagged via IMAGE_ID in os-release)."""
+    try:
+        text = open("/etc/os-release", encoding="utf-8").read()
+    except OSError:
+        return False
+    return re.search(r"^IMAGE_ID=\"?kiro\"?$", text, re.MULTILINE) is not None
+
+
+def gtk_theme_state():
+    """'commented' | 'active' | None — state of the GTK_THEME line in /etc/environment."""
+    try:
+        for line in open(ENVIRONMENT_FILE, encoding="utf-8"):
+            m = GTK_THEME_RE.match(line.rstrip("\n"))
+            if m:
+                return "commented" if m.group(2) else "active"
+    except OSError:
+        pass
+    return None
 
 
 def resolve_celestial_dir():
@@ -203,6 +229,23 @@ class PickerWindow(Gtk.ApplicationWindow):
         brow.append(self.create_btn)
         brow.append(self.create_spinner)
         box.append(brow)
+
+        # ── Kiro: /etc/environment GTK_THEME override ───────────────────
+        self.env_hint = None
+        if is_kiro() and gtk_theme_state():
+            box.append(self._heading("4. Kiro: GTK_THEME override"))
+            erow = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            self.env_toggle_btn = Gtk.Button()
+            self.env_toggle_btn.connect("clicked", self._on_env_toggle)
+            edit_btn = Gtk.Button(label="Edit in nano")
+            edit_btn.connect("clicked", self._on_env_edit)
+            erow.append(self.env_toggle_btn)
+            erow.append(edit_btn)
+            box.append(erow)
+            self.env_hint = Gtk.Label(xalign=0, wrap=True)
+            self.env_hint.add_css_class("dim-label")
+            box.append(self.env_hint)
+            self._refresh_env_state()
 
         scroller = Gtk.ScrolledWindow(vexpand=True)
         self.log_view = Gtk.TextView(editable=False, monospace=True, cursor_visible=False)
@@ -433,6 +476,63 @@ class PickerWindow(Gtk.ApplicationWindow):
                 ok = False
                 break
         GLib.idle_add(self._build_done, name, ok)
+
+    # ── Kiro /etc/environment callbacks ──────────────────────────────────
+    def _refresh_env_state(self):
+        state = gtk_theme_state()
+        if state == "commented":
+            self.env_toggle_btn.set_label("Re-enable GTK_THEME (add back)")
+            self.env_hint.set_text(
+                "GTK_THEME is commented out — celestial themes apply normally.")
+        elif state == "active":
+            self.env_toggle_btn.set_label("Comment out GTK_THEME (#)")
+            self.env_hint.set_text(
+                "GTK_THEME is active and overrides every GTK theme — comment it out "
+                "to let celestial themes apply.")
+        else:
+            self.env_toggle_btn.set_sensitive(False)
+            self.env_hint.set_text("No GTK_THEME line found in /etc/environment.")
+
+    def _on_env_toggle(self, _widget):
+        state = gtk_theme_state()
+        if not state:
+            self._refresh_env_state()
+            return
+        if state == "active":
+            expr = r"s/^\(\s*\)\(GTK_THEME=\)/\1#\2/"
+        else:
+            expr = r"s/^\(\s*\)#\+\s*\(GTK_THEME=\)/\1\2/"
+        self.env_toggle_btn.set_sensitive(False)
+        threading.Thread(target=self._env_toggle_worker, args=(expr,), daemon=True).start()
+
+    def _env_toggle_worker(self, expr):
+        proc = subprocess.Popen(["pkexec", "/usr/bin/sed", "-i", expr, ENVIRONMENT_FILE],
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        out = proc.stdout.read()
+        rc = proc.wait()
+        GLib.idle_add(self._env_toggle_done, rc, out)
+
+    def _env_toggle_done(self, rc, out):
+        self.env_toggle_btn.set_sensitive(True)
+        if rc != 0:
+            self.log(f"\nEditing {ENVIRONMENT_FILE} failed (exit {rc}). {out}\n")
+        else:
+            self.log(f"\n{ENVIRONMENT_FILE} updated — log out and back in for it to take effect.\n")
+        self._refresh_env_state()
+
+    def _on_env_edit(self, _widget):
+        term = os.environ.get("TERMINAL") or next(
+            (t for t in TERMINALS if GLib.find_program_in_path(t)), None)
+        if not term:
+            self.log("\nNo terminal emulator found; run 'sudo nano /etc/environment' yourself.\n")
+            return
+        proc = subprocess.Popen([term, "-e", "sudo", "nano", ENVIRONMENT_FILE])
+        self.log(f"\nOpened {ENVIRONMENT_FILE} in nano ({term}).\n")
+        threading.Thread(target=self._env_edit_watcher, args=(proc,), daemon=True).start()
+
+    def _env_edit_watcher(self, proc):
+        proc.wait()
+        GLib.idle_add(self._refresh_env_state)
 
     def _build_done(self, name, ok):
         self._busy = False

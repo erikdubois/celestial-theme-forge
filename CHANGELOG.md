@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026.07.21
+
+### What Changed
+
+- Picker: new "4. Kiro: GTK_THEME override" section, shown only on Kiro. Kiro ships
+  `GTK_THEME="Arc-Dawn-Dark"` in `/etc/environment`; while active it overrides every
+  GTK theme, so a freshly built celestial theme silently does nothing. One button
+  toggles the `#` comment on that line, a second opens the file in `nano` for a
+  manual edit.
+
+### Technical Details
+
+- Kiro detection is `IMAGE_ID=kiro` in `/etc/os-release` (`ID` is still `arch`).
+  The section is also hidden if no `GTK_THEME` line exists at all.
+- Toggle runs `pkexec /usr/bin/sed -i` (a polkit agent is part of every Kiro
+  session) in a daemon thread — never blocking the GTK callback. The button label
+  and hint are derived from a re-read of `/etc/environment` after each action,
+  including after the nano editor exits, so they can't drift from the file.
+- Nano opens in `$TERMINAL`, else the first of a known terminal list found on
+  PATH; `sudo nano` rather than `pkexec nano` because nano needs a TTY.
+- The log notes that a re-login is required — `/etc/environment` is read at PAM
+  session start, so nothing changes live.
+
+### Files Modified
+
+- `theme-forge-picker.py`
+
 ## 2026.06.27
 
 ### What Changed
