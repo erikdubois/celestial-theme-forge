@@ -2,7 +2,7 @@
 
 pkgname=celestial-theme-forge
 pkgver=26.07
-pkgrel=04
+pkgrel=05
 pkgdesc="Reproducible generator that expands the Celestial GTK theme with the 54-colour named Arc palette"
 arch=('any')
 url="https://github.com/erikdubois/celestial-theme-forge"
