@@ -10,7 +10,8 @@ license=('GPL3')
 depends=('bash' 'git' 'python' 'sassc' 'inkscape' 'imagemagick')
 optdepends=('python-gobject: theme-forge-picker.py GTK4 GUI'
             'gtk4: theme-forge-picker.py GTK4 GUI'
-            'xcolor: screen eyedropper for theme-forge-picker.py'
+            'xcolor: screen eyedropper for theme-forge-picker.py (X11)'
+            'hyprpicker: screen eyedropper for theme-forge-picker.py (Wayland)'
             'optipng: shrink rendered PNG assets')
 makedepends=('git')
 source=("${pkgname}::git+${url}.git")

@@ -50,6 +50,12 @@ renderer, all of which were made data-driven (no more hardcoded 4 names).
 python3 theme-forge-picker.py
 ```
 
+**Pick from screen** uses the picker that matches the session — `xcolor` on X11,
+`hyprpicker` on Wayland. X11 tools read the root window, which under Wayland
+belongs to XWayland and holds no composited output, so `xcolor` there would
+return black rather than fail. If the session's tool is missing the button is
+disabled with a tooltip naming it.
+
 Pick a colour from the screen (eyedropper) or a swatch, hit **Look up names
 online** for real colour-name suggestions (from [color.pizza] and
 [thecolorapi]), choose/edit the name, then **Create theme** — it runs the full
@@ -71,7 +77,9 @@ Headless equivalent (skips the GUI, adds + builds one colour):
 
 ```bash
 sudo pacman -S git sassc inkscape python imagemagick   # optipng optional (shrinks PNGs)
-sudo pacman -S python-gobject gtk4 xcolor              # for theme-forge-picker.py (xcolor = screen eyedropper)
+sudo pacman -S python-gobject gtk4                     # for theme-forge-picker.py
+sudo pacman -S xcolor                                  # screen eyedropper on X11
+sudo pacman -S hyprpicker                              # screen eyedropper on Wayland (wlroots)
 ```
 
 ## The theme checkout

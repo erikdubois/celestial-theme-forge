@@ -94,6 +94,37 @@
 
 - `theme-forge-picker.py`, `prepare-celestial.py` (mode 755)
 
+---
+
+- Picker: **Pick from screen** now selects its tool per session — `xcolor` on
+  X11, `hyprpicker` on Wayland — instead of always shelling out to `xcolor`.
+
+### Technical Details
+
+- The old gate was only `find_program_in_path("xcolor")`, a PATH check with no
+  notion of the session, so on Wayland the button stayed enabled and failed
+  quietly two ways: with XWayland up, xcolor grabbed XWayland's root window,
+  which holds no composited output, and returned a bogus colour (usually black)
+  with exit 0 — the hex passed `HEX_RE` and was accepted as a real pick; with no
+  XWayland it exited non-zero and the empty stdout made it a silent no-op.
+- `eyedropper_argv()` picks the tool off `$WAYLAND_DISPLAY`. hyprpicker runs as
+  `-f hex -l -b -q`; `-b` matters because its default "fancy" output wraps the
+  hex in ANSI colour escapes, which `HEX_RE` would reject.
+- The button is now disabled at construction with a tooltip naming the missing
+  tool when the session's picker is absent, rather than looking usable. The
+  runtime check stays for the case where it disappears while the app is open.
+- hyprpicker is wlroots-only, so this covers the Kiro Wayland TWM editions but
+  not GNOME/KDE; the compositor-agnostic option remains the
+  `org.freedesktop.portal.Screenshot.PickColor` portal call.
+- Verified: tool selection flips correctly on `$WAYLAND_DISPLAY`; hyprpicker on
+  an X11 session fails cleanly (exit 1, empty stdout → no-op, same as cancel);
+  and the Wayland branch driven end-to-end against a stub picker fills the hex
+  entry, lowercases the value and records it in Recent.
+
+### Files Modified
+
+- `theme-forge-picker.py`, `README.md`, `PKGBUILD`
+
 ## 2026.06.27
 
 ### What Changed

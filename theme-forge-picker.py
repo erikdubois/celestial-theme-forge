@@ -43,6 +43,12 @@ FUNDING = [
     ("YouTube membership", "https://www.youtube.com/@ErikDubois/join", "join on YouTube"),
     ("PayPal", "https://www.paypal.me/erikdubois", "direct one-off"),
 ]
+# Screen eyedropper. X11 tools grab the root window; under Wayland that root
+# belongs to XWayland and holds no composited output, so xcolor there returns a
+# bogus colour (usually black) rather than failing — hence a per-session tool.
+# -b drops the ANSI colouring hyprpicker otherwise wraps its output in.
+EYEDROPPER_X11 = ["xcolor", "--format", "hex"]
+EYEDROPPER_WAYLAND = ["hyprpicker", "-f", "hex", "-l", "-b", "-q"]
 CSS = b"""
 label#title { font-size: 20px; font-weight: 600; }
 .support-button { color: #e0567a; }
@@ -84,6 +90,11 @@ CELESTIAL_DEFAULT_DIR = "/tmp/celestial-gtk-theme"
 def celestial_dir_valid(path):
     return os.path.isdir(os.path.join(path, "src", "gtk")) and \
         os.path.isfile(os.path.join(path, "install.sh"))
+
+
+def eyedropper_argv():
+    """Screen-picker argv for this session (Wayland: hyprpicker, X11: xcolor)."""
+    return EYEDROPPER_WAYLAND if os.environ.get("WAYLAND_DISPLAY") else EYEDROPPER_X11
 
 
 def resolve_celestial_dir():
@@ -237,6 +248,10 @@ class PickerWindow(Gtk.ApplicationWindow):
         choose_btn.connect("clicked", self._on_choose)
         pick_btn = Gtk.Button(label="Pick from screen")
         pick_btn.connect("clicked", self._on_eyedropper)
+        tool = eyedropper_argv()[0]
+        if not GLib.find_program_in_path(tool):
+            pick_btn.set_sensitive(False)
+            pick_btn.set_tooltip_text(f"Install {tool} for the screen eyedropper")
         for w in (self.hex_entry, self.swatch, choose_btn, pick_btn):
             crow.append(w)
         box.append(crow)
@@ -447,15 +462,15 @@ class PickerWindow(Gtk.ApplicationWindow):
             round(rgba.red * 255), round(rgba.green * 255), round(rgba.blue * 255)))
 
     def _on_eyedropper(self, _widget):
-        if not GLib.find_program_in_path("xcolor"):
-            self.log("xcolor not installed; use Choose… instead.\n")
+        argv = eyedropper_argv()
+        if not GLib.find_program_in_path(argv[0]):
+            self.log(f"{argv[0]} not installed; use Choose… instead.\n")
             return
-        threading.Thread(target=self._eyedropper_worker, daemon=True).start()
+        threading.Thread(target=self._eyedropper_worker, args=(argv,), daemon=True).start()
 
-    def _eyedropper_worker(self):
+    def _eyedropper_worker(self, argv):
         try:
-            out = subprocess.run(["xcolor", "--format", "hex"],
-                                 capture_output=True, text=True, timeout=60)
+            out = subprocess.run(argv, capture_output=True, text=True, timeout=60)
             hexv = out.stdout.strip()
         except (OSError, subprocess.TimeoutExpired):
             hexv = ""
