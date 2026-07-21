@@ -1,8 +1,8 @@
 # Maintainer: Erik Dubois <erik.dubois@gmail.com>
 
 pkgname=celestial-theme-forge
-pkgver=26.06
-pkgrel=02
+pkgver=26.07
+pkgrel=01
 pkgdesc="Reproducible generator that expands the Celestial GTK theme with the 54-colour named Arc palette"
 arch=('any')
 url="https://github.com/erikdubois/celestial-theme-forge"
