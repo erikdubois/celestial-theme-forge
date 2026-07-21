@@ -4,6 +4,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import threading
 import urllib.error
 import urllib.request
@@ -32,6 +33,21 @@ RECENT_FILE = os.path.join(
     os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
     "celestial-theme-forge", "recent-colors")
 RECENT_MAX = 10
+# Funding channels — keep in sync with the other Kiro tweak tools and
+# kiro-website .github/FUNDING.yml if those change.
+FUNDING = [
+    ("GitHub Sponsors", "https://github.com/sponsors/erikdubois",
+     "best value — almost all goes to the project"),
+    ("Ko-fi", "https://ko-fi.com/erikdubois", "buy a coffee — one-off tip"),
+    ("Patreon", "https://www.patreon.com/kiroproject", "membership tiers + perks"),
+    ("YouTube membership", "https://www.youtube.com/@ErikDubois/join", "join on YouTube"),
+    ("PayPal", "https://www.paypal.me/erikdubois", "direct one-off"),
+]
+CSS = b"""
+label#title { font-size: 20px; font-weight: 600; }
+.support-button { color: #e0567a; }
+.support-button:hover { background-color: alpha(#e0567a, 0.18); }
+"""
 # Kiro ships GTK_THEME="Arc-Dawn-Dark" in /etc/environment; while it is active it
 # overrides every GTK theme, so a freshly built celestial theme appears to do nothing.
 ENVIRONMENT_FILE = "/etc/environment"
@@ -184,6 +200,21 @@ class PickerWindow(Gtk.ApplicationWindow):
                       margin_top=14, margin_bottom=14, margin_start=14, margin_end=14)
         self.set_child(box)
 
+        # ── header ──────────────────────────────────────────────────────
+        hrow = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        title = Gtk.Label(label="Celestial Theme Forge", xalign=0, hexpand=True)
+        title.set_name("title")
+        support_btn = Gtk.Button(label="♥ Support",
+                                 tooltip_text="Support Kiro's development")
+        support_btn.add_css_class("support-button")
+        support_btn.connect("clicked", self._on_support)
+        quit_btn = Gtk.Button(label="Quit")
+        quit_btn.connect("clicked", lambda _w: self.close())
+        for w in (title, support_btn, quit_btn):
+            hrow.append(w)
+        box.append(hrow)
+        box.append(Gtk.Separator())
+
         # ── theme source ────────────────────────────────────────────────
         srow = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         self.source_label = Gtk.Label(xalign=0, hexpand=True, wrap=True)
@@ -277,6 +308,39 @@ class PickerWindow(Gtk.ApplicationWindow):
 
         self._refresh_source_state()
         self._on_name_changed(self.name_entry)
+
+    # ── support dialog ─────────────────────────────────────────────────
+    def _on_support(self, _widget):
+        dlg = Gtk.Window(title="Support Kiro", transient_for=self, modal=True)
+        dlg.set_default_size(440, -1)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12,
+                      margin_top=18, margin_bottom=18, margin_start=18, margin_end=18)
+        box.append(self._heading("Support Kiro"))
+        intro = Gtk.Label(
+            label="Kiro and its tools are built by one person, for the community — "
+                  "and kept free. If Celestial Theme Forge saves you time, a little "
+                  "support keeps the work going. Thank you for being here.",
+            xalign=0, wrap=True, max_width_chars=52)
+        intro.add_css_class("dim-label")
+        box.append(intro)
+
+        for name, url, note in FUNDING:
+            content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            label = Gtk.Label(xalign=0)
+            label.set_markup(f"<b>{name}</b>")
+            hint = Gtk.Label(label=note, xalign=0)
+            hint.add_css_class("dim-label")
+            content.append(label)
+            content.append(hint)
+            btn = Gtk.Button(child=content)
+            btn.connect("clicked", lambda _w, u=url: Gtk.UriLauncher.new(u).launch(dlg, None, None))
+            box.append(btn)
+
+        close = Gtk.Button(label="Close", halign=Gtk.Align.END)
+        close.connect("clicked", lambda _w: dlg.close())
+        box.append(close)
+        dlg.set_child(box)
+        dlg.present()
 
     # ── small helpers ──────────────────────────────────────────────────
     def _heading(self, text):
@@ -473,9 +537,15 @@ class PickerWindow(Gtk.ApplicationWindow):
         threading.Thread(target=self._source_worker, daemon=True).start()
 
     def _source_worker(self):
-        argv = [os.path.join(SCRIPT_DIR, "prepare-celestial.py"), "--dir", CELESTIAL_DIR]
-        proc = subprocess.Popen(argv, cwd=SCRIPT_DIR, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, text=True)
+        argv = [sys.executable, os.path.join(SCRIPT_DIR, "prepare-celestial.py"),
+                "--dir", CELESTIAL_DIR]
+        try:
+            proc = subprocess.Popen(argv, cwd=SCRIPT_DIR, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, text=True)
+        except OSError as exc:
+            GLib.idle_add(self.log, f"failed to start prepare-celestial.py: {exc}\n")
+            GLib.idle_add(self._source_done, 1)
+            return
         for line in proc.stdout:
             GLib.idle_add(self.log, line)
         GLib.idle_add(self._source_done, proc.wait())
@@ -609,6 +679,11 @@ class PickerApp(Gtk.Application):
         super().__init__(application_id="be.kiroproject.CelestialThemeForge")
 
     def do_activate(self):
+        provider = Gtk.CssProvider()
+        provider.load_from_data(CSS)
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         PickerWindow(self).present()
 
 

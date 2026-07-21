@@ -67,6 +67,33 @@
 - `generate-arc-colors.sh`, `render-all.sh`, `theme-forge-picker.py`
 - `README.md`, `CLAUDE.md`, `PKGBUILD`
 
+---
+
+- Picker: header row with a title, a pink **♥ Support** button and **Quit**,
+  matching the other Kiro tweak tools. Support opens a dialog with the five
+  funding channels.
+
+### Technical Details
+
+- `FUNDING` and the `.support-button` CSS are copied from
+  `alacritty-tweak-tool`'s header so the tools stay visually consistent; the
+  list must track kiro-website `.github/FUNDING.yml`. The picker has no CSS
+  file, so the rules load from an inline `Gtk.CssProvider` in `do_activate`.
+- Fixed two defects in the theme-source button found before shipping:
+  `prepare-celestial.py` was not executable (dev checkout only — the package
+  installs it 755), so the picker's direct `Popen` of it would have raised
+  `PermissionError`. It is now invoked via `sys.executable`, is `chmod +x`, and
+  `_source_worker` guards `Popen` with `try/except OSError` so a failed launch
+  can no longer strand `_busy=True` and disable the buttons permanently.
+- Verified by driving the real handlers (not just launching): with a missing
+  checkout the button shows and Create is blocked; clicking it clones + patches
+  into `/tmp/ctf-verify`, hides the button, updates the label and enables
+  Create; the Support dialog opens as a toplevel titled "Support Kiro".
+
+### Files Modified
+
+- `theme-forge-picker.py`, `prepare-celestial.py` (mode 755)
+
 ## 2026.06.27
 
 ### What Changed
