@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026.07.23
+
+### What Changed
+
+- Restored five colours to the `COLORS` map — `denim`, `jasmine`, `mandarin`,
+  `night-owl` and `slateblue`. They ship in `celestial-themes` but appear in no
+  commit here, so the forge could regenerate only 60 of the 65 shipped colours.
+  Anything driven off this map — the new Kvantum themes, a clean rebuild — would
+  silently have skipped those five.
+
+### Technical Details
+
+- The accents were recovered from the built output rather than re-picked:
+  `selected_bg_color` in `Celestial-<C>/gtk-3.0/gtk.css` is the accent. Running
+  that read across all 60 overlapping colours reproduces this map's hex exactly,
+  zero mismatches, which is what establishes the five recovered values as the
+  originals: `denim 385fb8`, `jasmine fcde83`, `mandarin ea553f`,
+  `night-owl 527c8b`, `slateblue 394bd9`.
+- Kept as a commented block at the end of the map rather than merged into the
+  alphabetical columns, so the provenance stays attached to the values.
+- `indigo` remains the reverse case — in this map, never rendered into
+  `celestial-themes`. Left alone; adding it needs a full asset render.
+
+### Files Modified
+
+- `generate-arc-colors.sh`
+- `CHANGELOG.md`
+
 ## 2026.07.21
 
 ### What Changed

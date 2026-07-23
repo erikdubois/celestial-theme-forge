@@ -63,6 +63,14 @@ declare -A COLORS=(
   [tacao]="efa369"           [tangerine]="ff9500"
   [tory]="596bb0"            [twilight]="44397d"
   [vampire]="555a69"         [warm-pink]="fd3e84"
+  # Recovered, not newly picked: these five ship in celestial-themes but had
+  # dropped out of this map, and the checkout that built them is gone. The
+  # accents were read back out of the built CSS (selected_bg_color in
+  # Celestial-<C>/gtk-3.0/gtk.css), which reproduces every other colour's hex
+  # here exactly -- so the values are the originals, not a re-pick.
+  [denim]="385fb8"           [jasmine]="fcde83"
+  [mandarin]="ea553f"        [night-owl]="527c8b"
+  [slateblue]="394bd9"
 )
 # Stable display/iteration order (existing 4 first, then new alphabetical).
 EXISTING=(sea aliz azul pueril)
