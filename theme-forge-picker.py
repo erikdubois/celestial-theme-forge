@@ -630,14 +630,16 @@ class PickerWindow(Gtk.ApplicationWindow):
     def _build_worker(self, name, hexv):
         base_env = dict(os.environ, CELESTIAL_DIR=CELESTIAL_DIR)
         # Each step scoped to the single colour: render takes <name>, parse_sass
-        # honours THEME_VARIANTS, install takes -t <name> (-k adds the Qt/Kvantum theme).
+        # honours THEME_VARIANTS, install takes -t <name>. -k adds the Qt/Kvantum
+        # theme; --kde installs the KDE Plasma theme (colour scheme, global theme,
+        # desktop theme, Aurorae) so the colour is selectable in System Settings.
         steps = [
             ("generate", [os.path.join(SCRIPT_DIR, "generate-arc-colors.sh"),
                           "--add", name, hexv.lstrip("#")], SCRIPT_DIR, {}),
             ("parse_sass", [os.path.join(CELESTIAL_DIR, "parse_sass.sh")],
              CELESTIAL_DIR, {"THEME_VARIANTS": f"-{name}"}),
             ("render", [os.path.join(SCRIPT_DIR, "render-all.sh"), name], SCRIPT_DIR, {}),
-            ("install", [os.path.join(CELESTIAL_DIR, "install.sh"), "-t", name, "-k"],
+            ("install", [os.path.join(CELESTIAL_DIR, "install.sh"), "-t", name, "-k", "--kde"],
              CELESTIAL_DIR, {}),
         ]
         ok = True

@@ -11,6 +11,13 @@
   the full Arc palette like every other surface.
 - `render-all.sh` now runs `src/kde/render.sh` as part of the render pass (all
   colours, one invocation — no PNGs, so it is cheap next to the Inkscape work).
+- Fixed `theme-forge-picker.py`: its install step passed `-t <name> -k` (Kvantum
+  only), so a colour created in the picker rendered its KDE Plasma theme but never
+  installed it — the colour could not be selected in System Settings. Added
+  `--kde` to the install invocation. Confirmed on a test box: a picker-made colour
+  (`tanzine`) had GTK + Kvantum but no `~/.local/share/plasma/...` entries; after
+  the fix (render + `install.sh -t tanzine --kde`) all three modes appear under
+  look-and-feel, color-schemes and aurorae.
 - Added `stage-kde.sh` — creates the KDE output only: prepare → generate
   (`colors.def` + SCSS) → render just `src/kde/render.sh` → stage the tree into
   `celestial-themes/kde/` (paths overridable via `CELESTIAL_DIR` / `CT_DIR`).
@@ -51,6 +58,7 @@
 
 - `prepare-celestial.py`
 - `render-all.sh`
+- `theme-forge-picker.py`
 - `stage-kde.sh` (new)
 - `README.md`
 - `CHANGELOG.md`
