@@ -117,6 +117,78 @@ INSTALL_XML = """  # Set theme-specific colors (from src/colors.def)
   local pcolor="${THEME_PCOLOR[${theme_name}]:-#000000}"
   local scolor="${THEME_SCOLOR[${theme_name}]:-#000000}\""""
 
+# src/kde/render.sh renders every KDE Plasma artifact (color schemes, global
+# themes, desktop themes, aurorae) by looping four hardcoded themes and deriving
+# all colours from the GTK sass palette. Make the loop colors.def-driven; add a
+# button-colour fallback for generated colours (the accent-only recolour keeps
+# their neutral chrome greys, so only PRESSBG — the accent — varies); omit the
+# wallpaper section for colours with no wallpaper package; and skip the heavy
+# 1920x1080 fullscreen preview JPEG (the KCM falls back to the grid thumbnail).
+KDE_LOOP_ANCHOR = "for theme in sea aliz azul pueril; do"
+KDE_LOOP = ('source "${REPO_DIR}/src/colors.def"\n'
+            'for theme in "${THEME_COLORS[@]}"; do')
+
+KDE_BUTTON_ANCHOR = """    *)
+      echo "ERROR: no button colors for '${key}'."
+      exit 1
+      ;;"""
+KDE_BUTTON = """    *)
+      # Generated (aliz-derived) colours: the accent-only recolour preserves the
+      # neutral chrome greys, so only PRESSBG (the accent) varies per colour.
+      local _bt="${key%%|*}" _bm="${key##*|}"
+      case "${_bm}" in
+        light) CLOSEGLYPH="#4d4d4d"; GLYPH="#4d4d4d"; HOVERBG="#565656"; HOVEROP=".25"; HOVERGLYPH="#4c4c4c" ;;
+        *)     CLOSEGLYPH="#c3c3c3"; GLYPH="#adadad"; HOVERBG="#838383"; HOVEROP=".45"; HOVERGLYPH="#b0b0b0" ;;
+      esac
+      PRESSBG="${THEME_PCOLOR[${_bt}]:-#ffffff}"
+      ;;"""
+
+KDE_WALLPAPER_ANCHOR = """      pueril) wallpaper="Celestial-Pueril-Bamboo" ;;
+    esac"""
+KDE_WALLPAPER = """      pueril) wallpaper="Celestial-Pueril-Bamboo" ;;
+      *) wallpaper="" ;;
+    esac"""
+
+KDE_DEFAULTS_ANCHOR = """[ksplashrc][KSplash]
+Theme=${ID_PREFIX}${scheme_id}
+
+[Wallpaper]
+Image=${wallpaper}
+EOF
+}"""
+KDE_DEFAULTS = """[ksplashrc][KSplash]
+Theme=${ID_PREFIX}${scheme_id}
+EOF
+
+  # Wallpaper packages exist only for the stock colours; generated colours omit
+  # the section so applying the global theme keeps the current wallpaper.
+  if [[ -n "${wallpaper}" ]]; then
+    cat >> "${out}" << EOF
+
+[Wallpaper]
+Image=${wallpaper}
+EOF
+  fi
+}"""
+
+KDE_PREVIEW_ANCHOR = '''  # Fullscreen preview (the KCM's "Show Preview"); the package structure expects
+  # this exact JPEG path, so rsvg to PNG then convert to JPEG
+  rsvg-convert -w 1920 -h 1080 "${TMP_DIR}/preview.svg" -o "${TMP_DIR}/fullscreen.png" || exit 1
+  "${JPEG_CONVERT[@]}" "${TMP_DIR}/fullscreen.png" -quality 88 "${dir}/fullscreenpreview.jpg" || exit 1'''
+KDE_PREVIEW = '''  # Fullscreen preview intentionally skipped (celestial-theme-forge): across the
+  # 58x3 variants the 1920x1080 JPEGs dominate on-disk size, and the KCM falls
+  # back to the grid thumbnail (preview.png) when the fullscreen JPEG is absent.'''
+
+# A dark accent's WALL2 = darken(accent, 28%) can clamp to pure black, which
+# sassc emits as the CSS keyword "black" rather than "#000000"; the original
+# extraction regex only matched "#hex" and dropped it, aborting on the resulting
+# {{WALL2}}. Widen the value capture to any non-";" token (SVG/QML/magick all
+# accept colour keywords). Only the stock four accents dodged this.
+KDE_PREVIEW_RE_ANCHOR = (
+    r'''sed -n 's/^ *\([A-Z0-9]\+\): \(#[0-9a-fA-F]*\);$/\1=\2/p' "${TMP_DIR}/preview.css"''')
+KDE_PREVIEW_RE = (
+    r'''sed -n 's/^ *\([A-Z0-9]\+\): \([^;]*\);$/\1=\2/p' "${TMP_DIR}/preview.css"''')
+
 # file -> list of (anchor, replacement)
 PATCHES = {
     "parse_sass.sh": [(
@@ -194,6 +266,14 @@ PATCHES = {
         # needs the following line to tell the two apart.
         ('for theme in sea aliz azul pueril; do\n    generate_theme',
          'for theme in "${THEME_COLORS[@]}"; do\n    generate_theme'),
+    ],
+    "src/kde/render.sh": [
+        (KDE_LOOP_ANCHOR, KDE_LOOP),
+        (KDE_BUTTON_ANCHOR, KDE_BUTTON),
+        (KDE_WALLPAPER_ANCHOR, KDE_WALLPAPER),
+        (KDE_DEFAULTS_ANCHOR, KDE_DEFAULTS),
+        (KDE_PREVIEW_ANCHOR, KDE_PREVIEW),
+        (KDE_PREVIEW_RE_ANCHOR, KDE_PREVIEW_RE),
     ],
 }
 

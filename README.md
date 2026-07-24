@@ -5,7 +5,9 @@ Reproducible tooling that expands the
 **54-colour named Arc palette** from
 [kiro-arc-themes](https://github.com/kirodubes/kiro-arc-themes) — turning the
 stock 4 colours into **58 colours × 3 modes**, across every desktop surface
-(GTK 2/3/4, GNOME Shell, Cinnamon, xfwm4, metacity, openbox, labwc, plank).
+(GTK 2/3/4, GNOME Shell, Cinnamon, xfwm4, metacity, openbox, labwc, plank, and
+KDE Plasma — colour schemes, global themes, desktop themes and Aurorae window
+decorations).
 
 This folder is the **recipe**, not the output. It regenerates the per-colour
 source files inside a celestial checkout; the theme itself is built and
@@ -122,7 +124,8 @@ export CELESTIAL_DIR=/tmp/celestial-gtk-theme   # or wherever your checkout is
 # 2. Compile SCSS -> CSS for every colour (~1-2 min)
 "$CELESTIAL_DIR/parse_sass.sh"
 
-# 3. Render all PNG assets in parallel (~1h on 16 cores; resumable)
+# 3. Render all PNG assets in parallel (~1h on 16 cores; resumable). This also
+#    renders the KDE Plasma artifacts (src/kde/render.sh, all colours, one pass).
 ./render-all.sh
 
 # 4. Install into ~/.themes (-k also installs the Qt/Kvantum themes)
@@ -131,6 +134,49 @@ export CELESTIAL_DIR=/tmp/celestial-gtk-theme   # or wherever your checkout is
 
 Kvantum themes land in `~/.config/Kvantum/Celestial-<Colour>[-Dark|-Light]`; pick
 one once in **Kvantum Manager** and Qt apps follow the GTK accent.
+
+### KDE Plasma
+
+`render-all.sh` also runs `src/kde/render.sh`, which `prepare-celestial.py`
+patches to be `colors.def`-driven. It emits, for every colour × mode, into
+`src/kde/`:
+
+- `color-schemes/Celestial-<Colour>[-Dark|-Light].colors`
+- `look-and-feel/com.github.zquestz.Celestial-<Colour>[-Dark|-Light]/` (global themes)
+- `desktoptheme/Celestial-<Colour>[-Dark|-Light]/`
+- `aurorae/Celestial-<Colour>[-Dark|-Light]/` (window decorations)
+
+Generated colours reuse aliz's neutral titlebutton greys with their own accent,
+omit the `[Wallpaper]` line (no per-colour wallpaper package), and ship only the
+grid preview thumbnail (the 1920×1080 fullscreen JPEG is skipped for size).
+
+### Publishing to celestial-themes
+
+The [celestial-themes](https://github.com/erikdubois/celestial-themes) package
+repo is a committed snapshot of the rendered output.
+
+`stage-kde.sh` creates the KDE tree in one shot — prepare → generate
+(`colors.def` + SCSS) → render just `src/kde/render.sh` → stage into
+`celestial-themes/kde/`. It skips the slow Inkscape asset render (the KDE
+render compiles its own SCSS), so it finishes in minutes, not an hour:
+
+```bash
+./stage-kde.sh
+# CELESTIAL_DIR=~/celestial-gtk-theme CT_DIR=~/EDU/celestial-themes ./stage-kde.sh
+```
+
+It stages only the KDE tree (not the GTK/Kvantum folders); snapshot those as
+before. Equivalent manual copy, since `render.sh` writes the KDE output
+in-place under `$CELESTIAL_DIR/src/kde`:
+
+```bash
+CT=~/EDU/celestial-themes
+mkdir -p "$CT/kde"
+cp -r "$CELESTIAL_DIR"/src/kde/{color-schemes,look-and-feel,desktoptheme,aurorae} "$CT/kde/"
+```
+
+The PKGBUILD's `_install_family` reads exactly this `kde/` layout, one colour
+slice per package.
 
 To add or change a colour, edit the `COLORS` map at the top of
 `generate-arc-colors.sh` (lowercase name → accent hex, hyphens kept) and re-run

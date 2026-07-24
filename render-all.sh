@@ -55,4 +55,12 @@ bash "${CELESTIAL_DIR}/src/xfwm4/render-assets.sh"   >/dev/null 2>&1
 
 # Plank themes are cheap text templating; regenerate them too.
 bash "${CELESTIAL_DIR}/src/plank/render-plank-themes.sh" >/dev/null 2>&1
+
+# KDE Plasma artifacts (color schemes, global themes, desktop themes, aurorae).
+# render.sh loops the full colour set from src/colors.def in a single pass and
+# derives every colour from the GTK sass palette, so it ignores $targets and
+# always renders all colours — cheap next to the Inkscape passes (no PNGs).
+echo "Rendering KDE Plasma themes..."
+bash "${CELESTIAL_DIR}/src/kde/render.sh"
+
 echo "Done. Now run ${CELESTIAL_DIR}/parse_sass.sh (if needed) and ${CELESTIAL_DIR}/install.sh"

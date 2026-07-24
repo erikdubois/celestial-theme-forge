@@ -1,5 +1,60 @@
 # Changelog
 
+## 2026.07.24
+
+### What Changed
+
+- Extended the forge to generate **KDE Plasma** theming for all 58+ colours,
+  matching upstream celestial-gtk-theme 1.5.0's new `src/kde/` output (colour
+  schemes, global themes, desktop themes, Aurorae window decorations). Upstream
+  hardcodes these to the four stock colours; the forge now drives them across
+  the full Arc palette like every other surface.
+- `render-all.sh` now runs `src/kde/render.sh` as part of the render pass (all
+  colours, one invocation — no PNGs, so it is cheap next to the Inkscape work).
+- Added `stage-kde.sh` — creates the KDE output only: prepare → generate
+  (`colors.def` + SCSS) → render just `src/kde/render.sh` → stage the tree into
+  `celestial-themes/kde/` (paths overridable via `CELESTIAL_DIR` / `CT_DIR`).
+  Skips the ~1h Inkscape asset render since the KDE render compiles its own
+  SCSS, so an upstream KDE-only push takes minutes. Verified: a full run staged
+  4 families × 198 variants (66 colours × 3 modes) in ~50s with the checkout
+  cached, touching nothing but `kde/`.
+
+### Technical Details
+
+- `prepare-celestial.py` gains a `src/kde/render.sh` patch set, consistent with
+  how it already makes `install.sh` / `parse_sass.sh` / the `render-assets.sh`
+  scripts `colors.def`-driven:
+  - The `for theme in sea aliz azul pueril` loop becomes
+    `for theme in "${THEME_COLORS[@]}"` after sourcing `src/colors.def`.
+  - `button_colors()` gains a fallback for generated colours. Because every new
+    colour is "aliz with a different accent" and the accent-only recolour
+    (`arc-colors-recolor.py`) provably preserves the neutral chrome greys, the
+    titlebutton greys are constant per mode and only `PRESSBG` (the accent, from
+    `THEME_PCOLOR`) varies — no per-colour extraction needed.
+  - `write_defaults` omits the `[Wallpaper]` section for colours with no
+    wallpaper package (all but the stock four), so applying the global theme
+    keeps the current wallpaper instead of pointing at a missing image.
+  - The 1920×1080 fullscreen preview JPEG is skipped (grid thumbnail only);
+    across 58×3 variants those JPEGs dominate on-disk size and the KCM falls
+    back to the thumbnail.
+- Fixed a latent upstream bug exposed by dark accents: `darken(accent, 28%)` can
+  clamp to pure black, which sassc emits as the keyword `black`, not `#000000`.
+  The preview token-extraction regex only matched `#hex` and dropped it, so the
+  render aborted on the unsubstituted `{{WALL2}}` (first hit: `darkish`). Widened
+  the capture to any non-`;` value; SVG/QML/magick all accept colour keywords.
+- Validated end-to-end on a throwaway checkout: full render of 66 colours ×
+  3 modes (198 colour schemes) with zero errors; spot-checked that `crimson`
+  buttons carry its `#dc143c` accent with no `[Wallpaper]` and thumbnail-only
+  previews, while stock `azul` keeps its wallpaper and `#3498db` accent.
+
+### Files Modified
+
+- `prepare-celestial.py`
+- `render-all.sh`
+- `stage-kde.sh` (new)
+- `README.md`
+- `CHANGELOG.md`
+
 ## 2026.07.23
 
 ### What Changed
