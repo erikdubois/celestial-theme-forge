@@ -124,9 +124,31 @@ INSTALL_XML = """  # Set theme-specific colors (from src/colors.def)
 # their neutral chrome greys, so only PRESSBG — the accent — varies); omit the
 # wallpaper section for colours with no wallpaper package; and skip the heavy
 # 1920x1080 fullscreen preview JPEG (the KCM falls back to the grid thumbnail).
+# Resolve the colour set up front (before the wipe below needs it) and gate the
+# wipe on a full run. Optional colour args render only those variants — the
+# picker passes the one colour it just added; no args renders every colour.
+KDE_INIT_ANCHOR = '''mkdir -p "${CS_DIR}"
+# Wipe old packages so renamed/removed folders never linger
+rm -rf "${LNF_DIR}"
+mkdir -p "${LNF_DIR}"
+rm -rf "${DT_DIR}"
+mkdir -p "${DT_DIR}"
+rm -rf "${AUR_DIR}"
+mkdir -p "${AUR_DIR}"'''
+KDE_INIT = '''source "${REPO_DIR}/src/colors.def"
+kde_targets=("$@")
+[ ${#kde_targets[@]} -eq 0 ] && kde_targets=("${THEME_COLORS[@]}")
+
+mkdir -p "${CS_DIR}" "${LNF_DIR}" "${DT_DIR}" "${AUR_DIR}"
+# Full render (no colour args): wipe stale packages so renamed/removed folders
+# never linger. Scoped render: leave the other colours' output in place.
+if [ "${#kde_targets[@]}" -eq "${#THEME_COLORS[@]}" ]; then
+  rm -rf "${LNF_DIR}" "${DT_DIR}" "${AUR_DIR}"
+  mkdir -p "${LNF_DIR}" "${DT_DIR}" "${AUR_DIR}"
+fi'''
+
 KDE_LOOP_ANCHOR = "for theme in sea aliz azul pueril; do"
-KDE_LOOP = ('source "${REPO_DIR}/src/colors.def"\n'
-            'for theme in "${THEME_COLORS[@]}"; do')
+KDE_LOOP = 'for theme in "${kde_targets[@]}"; do'
 
 KDE_BUTTON_ANCHOR = """    *)
       echo "ERROR: no button colors for '${key}'."
@@ -268,6 +290,7 @@ PATCHES = {
          'for theme in "${THEME_COLORS[@]}"; do\n    generate_theme'),
     ],
     "src/kde/render.sh": [
+        (KDE_INIT_ANCHOR, KDE_INIT),
         (KDE_LOOP_ANCHOR, KDE_LOOP),
         (KDE_BUTTON_ANCHOR, KDE_BUTTON),
         (KDE_WALLPAPER_ANCHOR, KDE_WALLPAPER),

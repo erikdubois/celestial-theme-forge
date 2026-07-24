@@ -57,10 +57,10 @@ bash "${CELESTIAL_DIR}/src/xfwm4/render-assets.sh"   >/dev/null 2>&1
 bash "${CELESTIAL_DIR}/src/plank/render-plank-themes.sh" >/dev/null 2>&1
 
 # KDE Plasma artifacts (color schemes, global themes, desktop themes, aurorae).
-# render.sh loops the full colour set from src/colors.def in a single pass and
-# derives every colour from the GTK sass palette, so it ignores $targets and
-# always renders all colours — cheap next to the Inkscape passes (no PNGs).
-echo "Rendering KDE Plasma themes..."
-bash "${CELESTIAL_DIR}/src/kde/render.sh"
+# render.sh derives each colour from the GTK sass palette and accepts an optional
+# colour list, so scope it to the same $targets as the asset render — a
+# single-colour run (e.g. the picker) renders just that colour's KDE, not all 66.
+echo "Rendering KDE Plasma themes for: ${targets[*]}"
+bash "${CELESTIAL_DIR}/src/kde/render.sh" "${targets[@]}"
 
 echo "Done. Now run ${CELESTIAL_DIR}/parse_sass.sh (if needed) and ${CELESTIAL_DIR}/install.sh"

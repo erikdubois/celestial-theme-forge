@@ -9,8 +9,12 @@
   schemes, global themes, desktop themes, Aurorae window decorations). Upstream
   hardcodes these to the four stock colours; the forge now drives them across
   the full Arc palette like every other surface.
-- `render-all.sh` now runs `src/kde/render.sh` as part of the render pass (all
-  colours, one invocation — no PNGs, so it is cheap next to the Inkscape work).
+- `render-all.sh` now runs `src/kde/render.sh` as part of the render pass, scoped
+  to the same colour targets it was given. `render.sh` takes an optional colour
+  list (no args = all), and its wholesale wipe of the look-and-feel/desktoptheme/
+  aurorae dirs is now gated on a full run — a scoped render rebuilds only the
+  named colours and leaves the rest in place. A single-colour picker run renders
+  just that colour's KDE (seconds) instead of all ~66 (~40s).
 - Fixed `theme-forge-picker.py`: its install step passed `-t <name> -k` (Kvantum
   only), so a colour created in the picker rendered its KDE Plasma theme but never
   installed it — the colour could not be selected in System Settings. Added
