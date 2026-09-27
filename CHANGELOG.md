@@ -21,6 +21,14 @@
 - `stage-kde.sh` now stages `sddm/` alongside the other KDE families into
   `celestial-themes/kde/`, and the celestial-themes PKGBUILD installs it to
   `/usr/share/sddm/themes/`. README layout and manual-copy line updated.
+- **Fixed a KDE wipe introduced by the 1.7.2 update.** Upstream 1.7.1 removed
+  `REPO_DIR` from `src/kde/render.sh`, so the forge's `source "${REPO_DIR}/src/colors.def"`
+  silently failed: `THEME_COLORS` came up empty, the "full run" check passed as
+  `0 == 0`, every KDE dir was wiped and the loop rendered nothing — exit 0.
+  `stage-kde.sh` then staged that empty tree, deleting ~9,900 files from
+  `celestial-themes/kde/` (commit `3468bade`). The patch now sources
+  `${SCRIPT_DIR}/../colors.def` and aborts on an empty colour list, and
+  `stage-kde.sh` refuses to stage an empty rendered family.
 
 ### Technical Details
 
@@ -30,6 +38,10 @@
 - New `INSTALL_SDDM_BG` patch appends `*) sddm_bg="" ;;` to the `case`.
 - Verified on a 1.7.2 checkout: every patch applies, a second pass is a no-op
   (idempotent), and the patched scripts pass `bash -n`.
+- Anchor matching + `bash -n` did not catch the `REPO_DIR` loss; verified with a
+  real render instead: full run gives 198 entries in each of color-schemes,
+  look-and-feel, desktoptheme, aurorae and sddm; a scoped `crimson` render leaves
+  the rest intact; an empty `colors.def` now exits 1 without wiping.
 - Not yet covered (still the stock four colours upstream): Telegram, Firefox and
   Tk/ttk renders (`src/extra/{telegram,firefox,ttk}/render.sh`). Alacritty/foot
   are colour-agnostic.

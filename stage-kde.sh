@@ -128,6 +128,8 @@ stage_kde() {
     [[ -d "${CT_DIR}" ]] || { log_error "celestial-themes repo not found at ${CT_DIR}"; exit 1; }
     for d in color-schemes look-and-feel desktoptheme aurorae sddm; do
         [[ -d "${kde_src}/${d}" ]] || { log_error "missing rendered dir: ${kde_src}/${d}"; exit 1; }
+        # An empty render must never replace the staged tree (2026-09-27 wiped kde/).
+        [[ -n "$(ls -A "${kde_src}/${d}")" ]] || { log_error "empty rendered dir: ${kde_src}/${d}"; exit 1; }
     done
 
     install -dm755 "${CT_DIR}/kde"

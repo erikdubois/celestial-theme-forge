@@ -146,7 +146,14 @@ rm -rf "${AUR_DIR}"
 mkdir -p "${AUR_DIR}"
 rm -rf "${SDDM_DIR}"
 mkdir -p "${SDDM_DIR}"'''
-KDE_INIT = '''source "${REPO_DIR}/src/colors.def"
+# Upstream 1.7.1 dropped REPO_DIR (render.sh now cd's to SCRIPT_DIR). render.sh
+# has no `set -e`, so a failed source used to leave THEME_COLORS empty, pass the
+# "full run" check as 0 == 0, wipe every KDE dir and exit 0 — guard against it.
+KDE_INIT = '''source "${SCRIPT_DIR}/../colors.def" || exit 1
+if [ "${#THEME_COLORS[@]}" -eq 0 ]; then
+  echo "ERROR: no THEME_COLORS in ${SCRIPT_DIR}/../colors.def" >&2
+  exit 1
+fi
 kde_targets=("$@")
 [ ${#kde_targets[@]} -eq 0 ] && kde_targets=("${THEME_COLORS[@]}")
 
