@@ -29,6 +29,11 @@
   `celestial-themes/kde/` (commit `3468bade`). The patch now sources
   `${SCRIPT_DIR}/../colors.def` and aborts on an empty colour list, and
   `stage-kde.sh` refuses to stage an empty rendered family.
+- `prepare-celestial.py` now heals a checkout patched by an older forge. When
+  an anchor is missing, it re-patches from the pristine upstream file
+  (`git show HEAD:<file>`) before concluding that upstream moved. Previously the stale
+  `/tmp/celestial-gtk-theme` had to be deleted by hand after every patch change
+  ("expected upstream code not found … mkdir -p \"${CS_DIR}\"").
 
 ### Technical Details
 

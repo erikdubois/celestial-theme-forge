@@ -331,19 +331,41 @@ def clone(dest):
     subprocess.run(["git", "clone", "--depth", "1", REPO_URL, dest], check=True)
 
 
+def _apply(text, patches):
+    """Return (patched text, None), or (None, first missing anchor)."""
+    for anchor, replacement in patches:
+        if replacement in text:
+            continue
+        if anchor not in text:
+            return None, anchor
+        text = text.replace(anchor, replacement)
+    return text, None
+
+
+def _pristine(root, rel):
+    result = subprocess.run(["git", "-C", root, "show", f"HEAD:{rel}"],
+                            capture_output=True, text=True, check=False)
+    return result.stdout if result.returncode == 0 else None
+
+
 def patch_file(root, rel, patches):
     """Apply this file's patches; return True if anything changed."""
     path = os.path.join(root, rel)
     with open(path, encoding="utf-8") as f:
         text = f.read()
     original = text
-    for anchor, replacement in patches:
-        if replacement in text:
-            continue
-        if anchor not in text:
-            sys.exit(f"{rel}: expected upstream code not found — upstream changed?\n"
-                     f"  looking for: {anchor.splitlines()[0]}")
-        text = text.replace(anchor, replacement)
+    text, missing = _apply(text, patches)
+    if missing is not None:
+        # A checkout patched by an older forge holds that older replacement, so
+        # neither the anchor nor the new replacement is present. Re-patch from
+        # the pristine upstream file before concluding that upstream moved.
+        pristine = _pristine(root, rel)
+        if pristine is not None and pristine != original:
+            log(f"{rel}: outdated forge patch found — re-patching from upstream")
+            text, missing = _apply(pristine, patches)
+    if missing is not None:
+        sys.exit(f"{rel}: expected upstream code not found — upstream changed?\n"
+                 f"  looking for: {missing.splitlines()[0]}")
     if text == original:
         return False
     with open(path, "w", encoding="utf-8") as f:
