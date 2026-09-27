@@ -126,13 +126,13 @@ stage_kde() {
     log_section "Staging KDE tree into ${CT_DIR}/kde"
 
     [[ -d "${CT_DIR}" ]] || { log_error "celestial-themes repo not found at ${CT_DIR}"; exit 1; }
-    for d in color-schemes look-and-feel desktoptheme aurorae; do
+    for d in color-schemes look-and-feel desktoptheme aurorae sddm; do
         [[ -d "${kde_src}/${d}" ]] || { log_error "missing rendered dir: ${kde_src}/${d}"; exit 1; }
     done
 
     install -dm755 "${CT_DIR}/kde"
     # Replace each family wholesale so removed/renamed variants never linger.
-    for d in color-schemes look-and-feel desktoptheme aurorae; do
+    for d in color-schemes look-and-feel desktoptheme aurorae sddm; do
         rm -rf "${CT_DIR}/kde/${d}"
         cp -r "${kde_src}/${d}" "${CT_DIR}/kde/${d}"
         log_info "staged kde/${d} ($(find "${CT_DIR}/kde/${d}" -maxdepth 1 -mindepth 1 | wc -l) entries)"

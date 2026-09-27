@@ -18,6 +18,9 @@
     no default. Because `sddm_bg` is declared once outside the loop, a generated
     colour inherited the previous colour's wallpaper. It now resets to empty,
     so generated colours keep the plain colour background.
+- `stage-kde.sh` now stages `sddm/` alongside the other KDE families into
+  `celestial-themes/kde/`, and the celestial-themes PKGBUILD installs it to
+  `/usr/share/sddm/themes/`. README layout and manual-copy line updated.
 
 ### Technical Details
 
@@ -29,14 +32,15 @@
   (idempotent), and the patched scripts pass `bash -n`.
 - Not yet covered (still the stock four colours upstream): Telegram, Firefox and
   Tk/ttk renders (`src/extra/{telegram,firefox,ttk}/render.sh`). Alacritty/foot
-  are colour-agnostic. `stage-kde.sh` and the celestial-themes PKGBUILD do not
-  yet stage or package SDDM themes.
+  are colour-agnostic.
 - ruff 0.16 lint: parenthesised the implicit string concatenations in `PATCHES`
   (ISC004) and used a context manager in `patch_file` (SIM115); no behaviour change.
 
 ### Files Modified
 
 - `prepare-celestial.py`
+- `stage-kde.sh`
+- `README.md`
 - `CHANGELOG.md`
 
 ## 2026.07.24

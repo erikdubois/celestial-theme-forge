@@ -145,6 +145,7 @@ patches to be `colors.def`-driven. It emits, for every colour × mode, into
 - `look-and-feel/com.github.zquestz.Celestial-<Colour>[-Dark|-Light]/` (global themes)
 - `desktoptheme/Celestial-<Colour>[-Dark|-Light]/`
 - `aurorae/Celestial-<Colour>[-Dark|-Light]/` (window decorations)
+- `sddm/Celestial-<Colour>[-Dark|-Light]/` (SDDM login themes, upstream 1.5.2+)
 
 Generated colours reuse aliz's neutral titlebutton greys with their own accent,
 omit the `[Wallpaper]` line (no per-colour wallpaper package), and ship only the
@@ -172,7 +173,7 @@ in-place under `$CELESTIAL_DIR/src/kde`:
 ```bash
 CT=~/EDU/celestial-themes
 mkdir -p "$CT/kde"
-cp -r "$CELESTIAL_DIR"/src/kde/{color-schemes,look-and-feel,desktoptheme,aurorae} "$CT/kde/"
+cp -r "$CELESTIAL_DIR"/src/kde/{color-schemes,look-and-feel,desktoptheme,aurorae,sddm} "$CT/kde/"
 ```
 
 The PKGBUILD's `_install_family` reads exactly this `kde/` layout, one colour
