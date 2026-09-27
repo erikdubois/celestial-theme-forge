@@ -1,5 +1,44 @@
 # Changelog
 
+## 2026.09.27
+
+### What Changed
+
+- Checked the forge against upstream celestial-gtk-theme **1.7.2** (the fork was
+  fast-forwarded from 1.5.0, 38 commits). All existing `prepare-celestial.py`
+  anchors still match, so the forge keeps working unchanged for GTK, xfwm4,
+  plank and KDE.
+- 1.5.2+ added **SDDM login themes**, built inside the `src/kde/render.sh` colour
+  loop the forge already patches, so SDDM themes cover every colour automatically.
+  Two gaps in that new code are now patched:
+  - `render.sh` wiped `sddm/` unconditionally, so a scoped (single-colour picker)
+    render would delete every other colour's SDDM theme. The wipe is now gated on
+    a full run, like the look-and-feel/desktoptheme/aurorae dirs.
+  - `install.sh --sddm` chose the login background with a four-colour `case` and
+    no default. Because `sddm_bg` is declared once outside the loop, a generated
+    colour inherited the previous colour's wallpaper. It now resets to empty,
+    so generated colours keep the plain colour background.
+
+### Technical Details
+
+- `KDE_INIT_ANCHOR` now includes the `rm -rf/mkdir -p "${SDDM_DIR}"` lines, and
+  `KDE_INIT` adds `SDDM_DIR` to both the `mkdir` and the gated wipe. This anchor
+  now requires upstream ≥ 1.5.2, which the cloned fork satisfies.
+- New `INSTALL_SDDM_BG` patch appends `*) sddm_bg="" ;;` to the `case`.
+- Verified on a 1.7.2 checkout: every patch applies, a second pass is a no-op
+  (idempotent), and the patched scripts pass `bash -n`.
+- Not yet covered (still the stock four colours upstream): Telegram, Firefox and
+  Tk/ttk renders (`src/extra/{telegram,firefox,ttk}/render.sh`). Alacritty/foot
+  are colour-agnostic. `stage-kde.sh` and the celestial-themes PKGBUILD do not
+  yet stage or package SDDM themes.
+- ruff 0.16 lint: parenthesised the implicit string concatenations in `PATCHES`
+  (ISC004) and used a context manager in `patch_file` (SIM115); no behaviour change.
+
+### Files Modified
+
+- `prepare-celestial.py`
+- `CHANGELOG.md`
+
 ## 2026.07.24
 
 ### What Changed

@@ -117,8 +117,17 @@ INSTALL_XML = """  # Set theme-specific colors (from src/colors.def)
   local pcolor="${THEME_PCOLOR[${theme_name}]:-#000000}"
   local scolor="${THEME_SCOLOR[${theme_name}]:-#000000}\""""
 
+# install.sh --sddm picks the login background with a four-colour case and no
+# default; sddm_bg is declared once outside the loop, so a generated colour
+# would inherit the previous colour's wallpaper. Reset it for unknown colours.
+INSTALL_SDDM_BG_ANCHOR = """        pueril) sddm_bg="pueril/Pueril-Bamboo.webp" ;;
+      esac"""
+INSTALL_SDDM_BG = """        pueril) sddm_bg="pueril/Pueril-Bamboo.webp" ;;
+        *) sddm_bg="" ;;
+      esac"""
+
 # src/kde/render.sh renders every KDE Plasma artifact (color schemes, global
-# themes, desktop themes, aurorae) by looping four hardcoded themes and deriving
+# themes, desktop themes, aurorae, SDDM login themes) by looping four hardcoded themes and deriving
 # all colours from the GTK sass palette. Make the loop colors.def-driven; add a
 # button-colour fallback for generated colours (the accent-only recolour keeps
 # their neutral chrome greys, so only PRESSBG — the accent — varies); omit the
@@ -134,17 +143,19 @@ mkdir -p "${LNF_DIR}"
 rm -rf "${DT_DIR}"
 mkdir -p "${DT_DIR}"
 rm -rf "${AUR_DIR}"
-mkdir -p "${AUR_DIR}"'''
+mkdir -p "${AUR_DIR}"
+rm -rf "${SDDM_DIR}"
+mkdir -p "${SDDM_DIR}"'''
 KDE_INIT = '''source "${REPO_DIR}/src/colors.def"
 kde_targets=("$@")
 [ ${#kde_targets[@]} -eq 0 ] && kde_targets=("${THEME_COLORS[@]}")
 
-mkdir -p "${CS_DIR}" "${LNF_DIR}" "${DT_DIR}" "${AUR_DIR}"
+mkdir -p "${CS_DIR}" "${LNF_DIR}" "${DT_DIR}" "${AUR_DIR}" "${SDDM_DIR}"
 # Full render (no colour args): wipe stale packages so renamed/removed folders
 # never linger. Scoped render: leave the other colours' output in place.
 if [ "${#kde_targets[@]}" -eq "${#THEME_COLORS[@]}" ]; then
-  rm -rf "${LNF_DIR}" "${DT_DIR}" "${AUR_DIR}"
-  mkdir -p "${LNF_DIR}" "${DT_DIR}" "${AUR_DIR}"
+  rm -rf "${LNF_DIR}" "${DT_DIR}" "${AUR_DIR}" "${SDDM_DIR}"
+  mkdir -p "${LNF_DIR}" "${DT_DIR}" "${AUR_DIR}" "${SDDM_DIR}"
 fi'''
 
 KDE_LOOP_ANCHOR = "for theme in sea aliz azul pueril; do"
@@ -215,9 +226,9 @@ KDE_PREVIEW_RE = (
 PATCHES = {
     "parse_sass.sh": [(
         "_THEME_VARIANTS=('-sea' '-aliz' '-azul' '-pueril')",
-        'SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"\n'
+        ('SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"\n'
         'source "${SCRIPT_DIR}/src/colors.def"\n'
-        '_THEME_VARIANTS=("${THEME_COLORS[@]/#/-}")',
+        '_THEME_VARIANTS=("${THEME_COLORS[@]/#/-}")'),
     )],
     "install.sh": [
         ("THEME_VARIANTS=('-sea' '-aliz' '-azul' '-pueril')",
@@ -226,60 +237,61 @@ PATCHES = {
          '"-t, --theme VARIANTS" "Theme variant (names in src/colors.def; Default: All)"'),
         (INSTALL_CASE_ANCHOR, INSTALL_CASE),
         (INSTALL_XML_ANCHOR, INSTALL_XML),
+        (INSTALL_SDDM_BG_ANCHOR, INSTALL_SDDM_BG),
     ],
     "src/gtk/render-assets.sh": [
         (RENDER_PROLOGUE_ANCHOR, RENDER_PROLOGUE),
-        ("for color in '-aliz' '-azul' '-sea' '-pueril'; do\n"
+        (("for color in '-aliz' '-azul' '-sea' '-pueril'; do\n"
          '  ASSETS_DIR="assets${color}"\n'
          '  SRC_FILE="assets${color}.svg"\n\n'
-         '  [ -d "$ASSETS_DIR" ] && rm -rf "$ASSETS_DIR" && mkdir -p "$ASSETS_DIR"',
-         'for color in "${_COLORS[@]}"; do\n'
+         '  [ -d "$ASSETS_DIR" ] && rm -rf "$ASSETS_DIR" && mkdir -p "$ASSETS_DIR"'),
+         ('for color in "${_COLORS[@]}"; do\n'
          '  ASSETS_DIR="assets${color}"\n'
          '  SRC_FILE="assets${color}.svg"\n'
          '  [ -f "$SRC_FILE" ] || { echo "skip ${color}: no $SRC_FILE"; continue; }\n\n'
-         '  mkdir -p "$ASSETS_DIR"'),
+         '  mkdir -p "$ASSETS_DIR"')),
         ('$OPTIPNG -o7 --quiet "$ASSETS_DIR/$i.png"', 'optimize "$ASSETS_DIR/$i.png"'),
         ('$OPTIPNG -o7 --quiet "$ASSETS_DIR/$i@2.png"', 'optimize "$ASSETS_DIR/$i@2.png"'),
     ],
     "src/gtk-2.0/render-assets.sh": [
         (RENDER_PROLOGUE_ANCHOR, RENDER_PROLOGUE),
-        ("  for color in '-sea' '-aliz' '-azul' '-pueril'; do\n\n"
+        (("  for color in '-sea' '-aliz' '-azul' '-pueril'; do\n\n"
          '    ASSETS_DIR="assets${color}${variant}"\n'
-         '    SRC_FILE="assets${color}${variant}.svg"',
-         '  for color in "${_COLORS[@]}"; do\n\n'
+         '    SRC_FILE="assets${color}${variant}.svg"'),
+         ('  for color in "${_COLORS[@]}"; do\n\n'
          '    ASSETS_DIR="assets${color}${variant}"\n'
          '    SRC_FILE="assets${color}${variant}.svg"\n'
-         '    [ -f "$SRC_FILE" ] || { echo "skip ${color}${variant}: no $SRC_FILE"; continue; }'),
-        ('--export-filename="$ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null \\\n'
-         '        && $OPTIPNG -o7 --quiet "$ASSETS_DIR/$i.png"',
-         '--export-filename="$ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null\n'
-         '        optimize "$ASSETS_DIR/$i.png"'),
+         '    [ -f "$SRC_FILE" ] || { echo "skip ${color}${variant}: no $SRC_FILE"; continue; }')),
+        (('--export-filename="$ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null \\\n'
+         '        && $OPTIPNG -o7 --quiet "$ASSETS_DIR/$i.png"'),
+         ('--export-filename="$ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null\n'
+         '        optimize "$ASSETS_DIR/$i.png"')),
     ],
     "src/xfwm4/render-assets.sh": [
         (RENDER_PROLOGUE_ANCHOR, RENDER_PROLOGUE),
-        ("  for color in '-sea' '-aliz' '-azul' '-pueril'; do\n\n"
+        (("  for color in '-sea' '-aliz' '-azul' '-pueril'; do\n\n"
          '    ASSETS_DIR="assets${color}${variant}"\n'
          '    HD_ASSETS_DIR="assets${color}-hdpi${variant}"\n'
          '    XHD_ASSETS_DIR="assets${color}-xhdpi${variant}"\n'
-         '    SRC_FILE="assets${color}${variant}.svg"',
-         '  for color in "${_COLORS[@]}"; do\n\n'
+         '    SRC_FILE="assets${color}${variant}.svg"'),
+         ('  for color in "${_COLORS[@]}"; do\n\n'
          '    ASSETS_DIR="assets${color}${variant}"\n'
          '    HD_ASSETS_DIR="assets${color}-hdpi${variant}"\n'
          '    XHD_ASSETS_DIR="assets${color}-xhdpi${variant}"\n'
          '    SRC_FILE="assets${color}${variant}.svg"\n'
-         '    [ -f "$SRC_FILE" ] || { echo "skip ${color}${variant}: no $SRC_FILE"; continue; }'),
-        ('--export-filename="$ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null \\\n'
-         '        && $OPTIPNG -o7 --quiet "$ASSETS_DIR/$i.png"',
-         '--export-filename="$ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null\n'
-         '        optimize "$ASSETS_DIR/$i.png"'),
-        ('--export-filename="$HD_ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null \\\n'
-         '        && $OPTIPNG -o7 --quiet "$HD_ASSETS_DIR/$i.png"',
-         '--export-filename="$HD_ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null\n'
-         '        optimize "$HD_ASSETS_DIR/$i.png"'),
-        ('--export-filename="$XHD_ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null \\\n'
-         '        && $OPTIPNG -o7 --quiet "$XHD_ASSETS_DIR/$i.png"',
-         '--export-filename="$XHD_ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null\n'
-         '        optimize "$XHD_ASSETS_DIR/$i.png"'),
+         '    [ -f "$SRC_FILE" ] || { echo "skip ${color}${variant}: no $SRC_FILE"; continue; }')),
+        (('--export-filename="$ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null \\\n'
+         '        && $OPTIPNG -o7 --quiet "$ASSETS_DIR/$i.png"'),
+         ('--export-filename="$ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null\n'
+         '        optimize "$ASSETS_DIR/$i.png"')),
+        (('--export-filename="$HD_ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null \\\n'
+         '        && $OPTIPNG -o7 --quiet "$HD_ASSETS_DIR/$i.png"'),
+         ('--export-filename="$HD_ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null\n'
+         '        optimize "$HD_ASSETS_DIR/$i.png"')),
+        (('--export-filename="$XHD_ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null \\\n'
+         '        && $OPTIPNG -o7 --quiet "$XHD_ASSETS_DIR/$i.png"'),
+         ('--export-filename="$XHD_ASSETS_DIR/$i.png" "$SRC_FILE" >/dev/null\n'
+         '        optimize "$XHD_ASSETS_DIR/$i.png"')),
     ],
     "src/plank/render-plank-themes.sh": [
         ("\ngenerate_theme() {", PLANK_EXTEND),
@@ -315,7 +327,8 @@ def clone(dest):
 def patch_file(root, rel, patches):
     """Apply this file's patches; return True if anything changed."""
     path = os.path.join(root, rel)
-    text = open(path, encoding="utf-8").read()
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
     original = text
     for anchor, replacement in patches:
         if replacement in text:
