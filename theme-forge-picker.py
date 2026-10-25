@@ -733,6 +733,11 @@ class PickerApp(Gtk.Application):
         super().__init__(application_id="be.kiroproject.CelestialThemeForge")
 
     def do_activate(self):
+        # A second launch activates this running instance again: raise its window, don't add a second one
+        window = self.get_active_window()
+        if window is not None:
+            window.present()
+            return
         provider = Gtk.CssProvider()
         provider.load_from_data(CSS)
         Gtk.StyleContext.add_provider_for_display(

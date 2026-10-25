@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026.10.25
+
+### What Changed
+- Starting Celestial Theme Forge while it is open brings its window to the front instead of opening a second window.
+
+### Technical Details
+- GTK keeps one instance per `application_id`, so a second launch runs the activate handler again in the running app. It now presents `get_active_window()` when there is one. Same fix as ATT, ohmychadwm-tweak-tool and the KiroTux premium apps. Tested on a test box (Xvfb, own D-Bus session). `do_activate` returns before loading the CSS again. Second launch: 1 window.
+
+### Files Modified
+- `theme-forge-picker.py`
+- `CHANGELOG.md`
+
 ## 2026.09.28
 
 ### What Changed
